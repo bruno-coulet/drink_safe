@@ -12,3 +12,11 @@ wheels/
 # Sécurité & Environnement
 .env
 *.pyc
+
+# Données et fichiers temporaires
+data/*
+temp/*
+
+# Asssitants IA
+CLAUDE.md
+consignes.txt
