@@ -2613,6 +2613,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "ipykernel" },
+    { name = "matplotlib" },
     { name = "mlflow" },
     { name = "pandas" },
     { name = "pathlib" },
@@ -2623,6 +2624,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ipykernel", specifier = ">=7.2.0" },
+    { name = "matplotlib", specifier = ">=3.10.9" },
     { name = "mlflow", specifier = ">=3.12.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pathlib", specifier = ">=1.0.1" },

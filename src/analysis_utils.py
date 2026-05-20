@@ -20,6 +20,62 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 
+def fill_numeric_with_median(
+    X: pd.DataFrame,
+    cols: List[str],
+    stats: Dict[str, Any],
+    key: str,
+) -> pd.DataFrame:
+    """Impute les colonnes numériques avec leur médiane (apprise sur train)."""
+    if key not in stats:
+        stats[key] = {}
+        for c in cols:
+            if c in X.columns:
+                X[c] = pd.to_numeric(X[c], errors="coerce")
+                stats[key][c] = X[c].median()
+    for c in cols:
+        if c in X.columns:
+            X[c] = pd.to_numeric(X[c], errors="coerce")
+            if c in stats.get(key, {}):
+                X[c] = X[c].fillna(stats[key][c])
+    return X
+
+def top_correlated_features(
+    X: pd.DataFrame,
+    y: pd.Series,
+    n: int = 6,
+    numeric_only: bool = True,
+) -> Tuple[pd.Series, List[str]]:
+    """
+    Calcule la corrélation des variables numériques avec une target.
+
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Features d'entrée.
+    y : pd.Series
+        Target associée à X.
+    n : int
+        Nombre de variables les plus corrélées à retourner.
+    numeric_only : bool
+        Applique la corrélation uniquement aux colonnes numériques.
+
+    Returns
+    -------
+    corr_target : pd.Series
+        Corrélation de chaque variable numérique avec la target.
+    top_cols : list
+        Liste des n variables avec corrélation absolue maximale.
+    """
+    num_cols = X.select_dtypes(include=["number"]).columns
+    df_corr = X[num_cols].copy()
+    df_corr["target"] = y
+    corr_target = df_corr.corr(numeric_only=numeric_only)["target"].drop("target")
+    top_cols = (
+        corr_target.abs().sort_values(ascending=False).head(n).index.tolist()
+    )
+    return corr_target, top_cols
+
 # --- Manipulation de Features & Corrélations ---
 
 def select_existing_features(features: Iterable[str], columns: Iterable[str]) -> List[str]:
