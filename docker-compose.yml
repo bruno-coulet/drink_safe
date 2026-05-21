@@ -1,0 +1,10 @@
+services:
+  mlflow-back:
+    build: .
+    container_name: mlflow-back
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./runs:/app/runs
+      - ./artifacts:/app/artifacts
+    restart: unless-stopped
