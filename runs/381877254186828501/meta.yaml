@@ -1,8 +1,0 @@
-artifact_location: file:C:/Users/ayoub/Documents/waterflow/mlruns/381877254186828501
-creation_time: 1779371354397
-experiment_id: '381877254186828501'
-last_update_time: 1779371354397
-lifecycle_stage: active
-name: water_quality_classification
-trace_location: null
-workspace: default
