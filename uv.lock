@@ -2618,6 +2618,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pathlib" },
     { name = "pytest" },
+    { name = "scikit-learn" },
     { name = "seaborn" },
 ]
 
@@ -2629,6 +2630,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pathlib", specifier = ">=1.0.1" },
     { name = "pytest", specifier = ">=9.0.3" },
+    { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "seaborn", specifier = ">=0.13.2" },
 ]
 
