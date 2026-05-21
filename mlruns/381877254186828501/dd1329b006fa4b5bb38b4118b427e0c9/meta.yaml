@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/ayoub/Documents/waterflow/mlruns/381877254186828501/dd1329b006fa4b5bb38b4118b427e0c9/artifacts
+end_time: 1779371511992
+entry_point_name: ''
+experiment_id: '381877254186828501'
+lifecycle_stage: active
+run_id: dd1329b006fa4b5bb38b4118b427e0c9
+run_name: random_forest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779371509878
+status: 3
+tags: []
+user_id: ayoub
