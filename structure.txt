@@ -1,0 +1,41 @@
+.
+├── CLAUDE.md
+├── Dockerfile
+├── README.md
+├── artifacts
+├── consignes.txt
+├── data
+│   ├── processed
+│   ├── raw
+│   │   └── water_potability.csv
+│   └── water_quality_description.txt
+├── docker
+├── docker-compose.yml
+├── experiment.py
+├── front
+│   └── app.py
+├── notebooks
+│   ├── __init__.py
+│   └── eda.ipynb
+├── pyproject.toml
+├── runs
+│   ├── 198619243026398158
+│   │   └── meta.yaml
+│   └── models
+├── src
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── analysis_utils.cpython-312.pyc
+│   │   └── cleaning_utils.cpython-312.pyc
+│   ├── analysis_utils.py
+│   ├── cleaning_utils.py
+│   ├── cleanning.py
+│   └── init_mlflow.py
+├── structure.txt
+├── temp
+├── tests 
+│   ├── test_functionnal.py
+│   └── test_unit.py
+└── uv.lock
+
+15 directories, 24 files
