@@ -4,12 +4,25 @@ version = "0.1.0"
 description = "MLOps"
 readme = "README.md"
 requires-python = ">=3.12"
+# 1. UNIQUEMENT LA PROD (Ce qu'il faut sur ton VPS pour l'API et le Front)
 dependencies = [
-    "ipykernel>=7.2.0",
-    "matplotlib>=3.10.9",
     "mlflow>=3.12.0",
     "pandas>=2.3.3",
     "pathlib>=1.0.1",
-    "pytest>=9.0.3",
+    "streamlit>=1.57.0",
+]
+
+# 2. LES GROUPES LOGIQUES AVEC UV
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "matplotlib>=3.10.9",
     "seaborn>=0.13.2",
 ]
+test = [
+    "pytest>=9.0.3",
+    "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
