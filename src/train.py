@@ -116,8 +116,11 @@ def train_and_log_model(model_name, model, X_train, X_val, y_train, y_val):
 # =========================
 
 def main():
-    mlflow.set_tracking_uri("file:./runs")
-    mlflow.set_experiment("water_quality_classification")
+    # Dis à MLflow d'envoyer les métriques et modèles au serveur Docker, pas en local !
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
+    # mlflow.set_tracking_uri("file:./runs")
+    # mlflow.set_experiment("water_quality_classification")
+    mlflow.set_experiment("water_potability_clean_v1")
 
     X, y = load_data()
 

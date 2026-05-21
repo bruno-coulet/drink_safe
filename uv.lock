@@ -2922,6 +2922,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pathlib" },
     { name = "streamlit" },
+    { name = "xgboost" },
 ]
 
 [package.dev-dependencies]
@@ -2941,6 +2942,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pathlib", specifier = ">=1.0.1" },
     { name = "streamlit", specifier = ">=1.57.0" },
+    { name = "xgboost", specifier = ">=3.2.0" },
 ]
 
 [package.metadata.requires-dev]

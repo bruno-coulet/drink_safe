@@ -15,4 +15,5 @@ EXPOSE 5000
 
 # Commande par défaut pour lancer le serveur MLflow
 # Le host 0.0.0.0 est obligatoire pour que Docker communique avec ton Windows
-CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "./runs", "--default-artifact-root", "./artifacts"]
+# CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "./runs", "--default-artifact-root", "./artifacts"]
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "/runs", "--default-artifact-root", "/artifacts"]
