@@ -116,7 +116,7 @@ def train_and_log_model(model_name, model, X_train, X_val, y_train, y_val):
 # =========================
 
 def main():
-    mlflow.set_tracking_uri("file:./mlruns")
+    mlflow.set_tracking_uri("file:./runs")
     mlflow.set_experiment("water_quality_classification")
 
     X, y = load_data()
