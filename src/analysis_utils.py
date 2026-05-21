@@ -166,10 +166,9 @@ def plot_numeric_histograms(
     plt.figure(figsize=(n_cols * figsize_per_col[0], n_rows * figsize_per_col[1]))
     for i, col in enumerate(num_cols, 1):
         plt.subplot(n_rows, n_cols, i)
-        # Ajout du paramètre kde=True pour une meilleure lecture des distributions
         sns.histplot(X[col].dropna(), bins=bins, kde=True)
-        plt.xlabel("")
-        plt.ylabel("")
+        plt.xlabel(col)  # Ajout du titre pour l'axe des abscisses
+        plt.ylabel("Fréquence")  # Ajout du titre pour l'axe des ordonnées
         plt.grid(True, alpha=0.3)
         plt.title(col)
     plt.tight_layout()
