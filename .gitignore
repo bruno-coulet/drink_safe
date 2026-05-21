@@ -21,3 +21,7 @@ temp/*
 CLAUDE.md
 consignes.txt
 .github/copilot-instructions.md
+
+# MLflow local data
+runs/
+artifacts/
