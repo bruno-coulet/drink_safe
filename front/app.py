@@ -8,8 +8,11 @@ Description : Application Streamlit permettant de configurer un échantillon d'e
 """
 
 import os
-import streamlit as st
+from pathlib import Path
+import base64
+
 import requests
+import streamlit as st
 
 # 1. Configuration de la page
 st.set_page_config(
@@ -17,6 +20,56 @@ st.set_page_config(
     page_icon="💧",
     layout="centered"
 )
+
+def get_base_64(file_path):
+    with open(file_path, "rb") as file_object:
+        data = file_object.read()
+    return base64.b64encode(data).decode()
+
+img = get_base_64(Path(__file__).resolve().parent / "assets" / "eau.webp")
+
+css = f"""
+<style>
+.stApp {{
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url("data:image/webp;base64,{img}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: #fff;
+}}
+
+.stApp .block-container {{
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 1.25rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    backdrop-filter: blur(4px);
+}}
+
+.stApp p,
+.stApp li,
+.stApp label,
+.stApp h1,
+.stApp h2,
+.stApp h3,
+.stApp h4,
+.stApp h5,
+.stApp h6,
+.stApp span {{
+    color: #fff !important;
+}}
+
+[data-testid="stHeader"], [data-testid="stToolbar"] {{
+    background: transparent;
+}}
+</style>
+"""
+st.markdown(css, unsafe_allow_html=True)
+
+
 
 # Configuration de la route d'API
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/predict")
@@ -29,10 +82,11 @@ st.write(
 )
 st.markdown("---")
 
-st.subheader("Configuration du modèle")
+st.subheader("Choisissez le modèle")
 # Sélection utilisateur intuitive
 model_display = st.selectbox(
-    "Choisissez l'algorithme d'analyse :",
+    # "Choisissez l'algorithme d'analyse :",
+    "",
     ["Régression Logistique (Données Standardisées)", "Random Forest (Données Brutes)"]
 )
 
