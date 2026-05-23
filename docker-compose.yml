@@ -8,6 +8,6 @@ services:
     #   - ./runs:/app/runs
     #   - ./artifacts:/app/artifacts
     volumes:
-      - ./runs:/runs
-      - ./artifacts:/artifacts
+      - ./runs:/app/runs
+      - ./artifacts:/app/artifacts
     restart: unless-stopped

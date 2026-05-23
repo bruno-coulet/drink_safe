@@ -21,6 +21,8 @@ temp/*
 CLAUDE.md
 consignes.txt
 .github/copilot-instructions.md
+PROJECT*.md
+GEMINI*.md
 
 # MLflow local data
 runs/

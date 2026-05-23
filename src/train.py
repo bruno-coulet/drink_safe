@@ -1,143 +1,142 @@
-from pathlib import Path
+"""
+-------------------------------------------------------------------------------
+Projet : Waterflow (Potabilité de l'eau)
+Composant : Entraînement / Classification binaire
+Description :   Charge le dataset spécifié (brut ou standardisé)
+                entraîne le modèle sélectionné
+                calcule les métriques de validation
+                journalise l'ensemble dans MLflow.
+-------------------------------------------------------------------------------
+"""
 
+from pathlib import Path
+from typing import Any
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import mlflow
 import mlflow.sklearn
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    confusion_matrix,
-)
 
-from models import get_models
+def executer_pipeline_entrainement(
+    chemin_donnees: Path,
+    nom_experience: str,
+    type_modele: str,
+    configuration_modele: dict[str, Any],
+    hote_mlflow: str = "127.0.0.1",
+    port_mlflow: int = 5000
+) -> None:
+    """
+    Exécute l'entraînement d'un modèle spécifique sur un jeu de données donné
+    et enregistre les résultats dans l'interface de suivi MLflow.
+
+    Arguments:
+        chemin_donnees: Chemin absolu vers le fichier CSV (imputé ou standardisé).
+        nom_experience: Nom de l'expérience MLflow.
+        type_modele: Nom abrégé du modèle pour l'identification.
+        configuration_modele: Dictionnaire contenant les hyperparamètres du modèle.
+        hote_mlflow: Adresse IP du serveur MLflow.
+        port_mlflow: Port du serveur MLflow.
+    """
+    # 1. Connexion au serveur de suivi MLflow
+    # uri_suivi: str = f"http://{hote_mlflow}:{port_mlflow}"
+    # mlflow.set_tracking_uri(uri_suivi)
+    # mlflow.set_experiment(nom_experience)
+    
+
+    uri_suivi: str = f"http://{hote_mlflow}:{port_mlflow}"
+    mlflow.set_tracking_uri(uri_suivi)
+    
+    # Résolution du chemin absolu local vers le dossier du volume partagé
+    racine_projet: Path = chemin_donnees.resolve().parent.parent.parent
+    dossier_runs_local: Path = racine_projet / "runs"
+    
+    # Conversion en URI de fichier (file://...) pour forcer l'écriture locale directe
+    uri_backend_local: str = dossier_runs_local.as_uri()
+
+    # Création explicite de l'expérience avec l'emplacement racine écrasé
+    experience = mlflow.get_experiment_by_name(nom_experience)
+    if experience is None:
+        mlflow.create_experiment(
+            name=nom_experience,
+            artifact_location=uri_backend_local
+        )
+    
+    mlflow.set_experiment(nom_experience)
 
 
-# =========================
-# CONFIG
-# =========================
 
-ROOT = Path(__file__).resolve().parent.parent
+    # 2. Préparation des données
+    df: pd.DataFrame = pd.read_csv(chemin_donnees)
+    X: pd.DataFrame = df.drop(columns=["Potability"])
+    y: pd.Series = df["Potability"]
 
-DATA_PATH = ROOT / "data" / "processed" / "water_inputed.csv"
-
-TARGET = "Potability"
-
-EXPERIMENT_NAME = "water_quality_classification"
-
-RANDOM_STATE = 42
-
-TEST_SIZE = 0.2
-
-
-# =========================
-# DATA
-# =========================
-
-def load_data():
-    df = pd.read_csv(DATA_PATH)
-
-    X = df.drop(columns=[TARGET])
-    y = df[TARGET]
-
-    return X, y
-
-
-def split_data(X, y):
-    return train_test_split(
-        X,
-        y,
-        test_size=TEST_SIZE,
-        stratify=y,
-        random_state=RANDOM_STATE
+    # Division stricte des ensembles d'entraînement et de validation (80/20)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
+    # Identification de la nature du dataset pour le suivi MLflow
+    suffixe_dataset: str = "standardise" if "_std" in chemin_donnees.stem else "brut"
+    nom_run: str = f"{type_modele}_{suffixe_dataset}"
 
-# =========================
-# EVALUATION
-# =========================
+    # 3. Initialisation du modèle
+    if type_modele == "LogisticRegression":
+        modele = LogisticRegression(**configuration_modele)
+    elif type_modele == "RandomForest":
+        modele = RandomForestClassifier(**configuration_modele)
+    else:
+        raise ValueError(f"Type de modèle non supporté : {type_modele}")
 
-def evaluate_model(model, X_val, y_val):
-    y_pred = model.predict(X_val)
-    y_proba = model.predict_proba(X_val)[:, 1]
+    # 4. Phase d'exécution MLflow
+    with mlflow.start_run(run_name=nom_run):
+        # Entraînement
+        modele.fit(X_train, y_train)
 
-    metrics = {
-        "accuracy": accuracy_score(y_val, y_pred),
-        "precision": precision_score(y_val, y_pred),
-        "recall": recall_score(y_val, y_pred),
-        "f1_score": f1_score(y_val, y_pred),
-        "roc_auc": roc_auc_score(y_val, y_proba),
-    }
+        # Évaluation
+        predictions = modele.predict(X_val)
 
-    cm = confusion_matrix(y_val, y_pred)
+        metriques: dict[str, float] = {
+            "accuracy": float(accuracy_score(y_val, predictions)),
+            "f1_score": float(f1_score(y_val, predictions, average="binary")),
+            "precision": float(precision_score(y_val, predictions, average="binary")),
+            "recall": float(recall_score(y_val, predictions, average="binary"))
+        }
 
-    return metrics, cm
+        # Journalisation des métadonnées et paramètres
+        mlflow.log_param("model_name", type_modele)
+        mlflow.log_param("dataset_type", suffixe_dataset)
+        mlflow.log_params(configuration_modele)
+        mlflow.log_metrics(metriques)
 
-
-# =========================
-# MLFLOW TRAINING
-# =========================
-
-def train_and_log_model(model_name, model, X_train, X_val, y_train, y_val):
-    with mlflow.start_run(run_name=model_name):
-
-        mlflow.log_param("model_name", model_name)
-        mlflow.log_param("target", TARGET)
-        mlflow.log_param("test_size", TEST_SIZE)
-        mlflow.log_param("random_state", RANDOM_STATE)
-
-        mlflow.log_params(model.get_params())
-
-        model.fit(X_train, y_train)
-
-        metrics, cm = evaluate_model(model, X_val, y_val)
-
-        mlflow.log_metrics(metrics)
-
-        mlflow.log_metric("true_negative", cm[0][0])
-        mlflow.log_metric("false_positive", cm[0][1])
-        mlflow.log_metric("false_negative", cm[1][0])
-        mlflow.log_metric("true_positive", cm[1][1])
-
-        mlflow.sklearn.log_model(model, artifact_path="model")
-
-        print(f"\nModel: {model_name}")
-        print(metrics)
-        print("Confusion matrix:")
-        print(cm)
-
-
-# =========================
-# MAIN
-# =========================
-
-def main():
-    # Dis à MLflow d'envoyer les métriques et modèles au serveur Docker, pas en local !
-    mlflow.set_tracking_uri("http://127.0.0.1:5000")
-    # mlflow.set_tracking_uri("file:./runs")
-    # mlflow.set_experiment("water_quality_classification")
-    mlflow.set_experiment("water_potability_clean_v1")
-
-    X, y = load_data()
-
-    X_train, X_val, y_train, y_val = split_data(X, y)
-
-    models = get_models()
-
-    for model_name, model in models.items():
-        train_and_log_model(
-            model_name=model_name,
-            model=model,
-            X_train=X_train,
-            X_val=X_val,
-            y_train=y_train,
-            y_val=y_val
-        )
+        # Enregistrement de l'artefact
+        mlflow.sklearn.log_model(sk_model=modele, artifact_path="model")
 
 
 if __name__ == "__main__":
-    main()
+    RACINE: Path = Path(__file__).resolve().parent.parent
+    NOM_EXP: str = "experiment_water_quality"
+
+    # Définition des chemins vers les deux versions des données
+    DATA_IMPUTED: Path = RACINE / "data" / "processed" / "water_imputed.csv"
+    DATA_STANDARD: Path = RACINE / "data" / "processed" / "water_std.csv"
+
+    # Scénario 1 : Régression Logistique sur données standardisées
+    print("Lancement : Logistic Regression + Données Standardisées...")
+    executer_pipeline_entrainement(
+        chemin_donnees=DATA_STANDARD,
+        nom_experience=NOM_EXP,
+        type_modele="LogisticRegression",
+        configuration_modele={"max_iter": 1000, "random_state": 42}
+    )
+
+    # Scénario 2 : Random Forest sur données imputées brutes (non standardisées)
+    print("Lancement : Random Forest + Données Imputées Brutes...")
+    executer_pipeline_entrainement(
+        chemin_donnees=DATA_IMPUTED,
+        nom_experience=NOM_EXP,
+        type_modele="RandomForest",
+        configuration_modele={"n_estimators": 100, "random_state": 42, "n_jobs": -1}
+    )

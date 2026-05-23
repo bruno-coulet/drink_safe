@@ -1,11 +1,12 @@
 .
-├── CLAUDE.md
 ├── Dockerfile
+├── GEMINI_CONTEXT.md
 ├── README.md
 ├── artifacts
 ├── consignes.txt
 ├── data
 │   ├── processed
+│   │   └── water_imputed.csv
 │   ├── raw
 │   │   └── water_potability.csv
 │   └── water_quality_description.txt
@@ -14,28 +15,110 @@
 ├── experiment.py
 ├── front
 │   └── app.py
+├── mlflow.db
 ├── notebooks
 │   ├── __init__.py
 │   └── eda.ipynb
 ├── pyproject.toml
 ├── runs
-│   ├── 198619243026398158
-│   │   └── meta.yaml
+│   ├── 749990774911543448
+│   │   ├── 76f8ec3c5c844e1cbd56f428ce3343f9
+│   │   │   ├── artifacts
+│   │   │   ├── meta.yaml
+│   │   │   ├── metrics
+│   │   │   │   ├── accuracy
+│   │   │   │   ├── f1_score
+│   │   │   │   ├── false_negative
+│   │   │   │   ├── false_positive
+│   │   │   │   ├── precision
+│   │   │   │   ├── recall
+│   │   │   │   ├── roc_auc
+│   │   │   │   ├── true_negative
+│   │   │   │   └── true_positive
+│   │   │   ├── outputs
+│   │   │   │   └── m-f01f10ae52a9445982207603fb0dae45
+│   │   │   │       └── meta.yaml
+│   │   │   ├── params
+│   │   │   │   ├── C
+│   │   │   │   ├── class_weight
+│   │   │   │   ├── dual
+│   │   │   │   ├── fit_intercept
+│   │   │   │   ├── intercept_scaling
+│   │   │   │   ├── l1_ratio
+│   │   │   │   ├── max_iter
+│   │   │   │   ├── model_name
+│   │   │   │   ├── n_jobs
+│   │   │   │   ├── penalty
+│   │   │   │   ├── random_state
+│   │   │   │   ├── solver
+│   │   │   │   ├── target
+│   │   │   │   ├── test_size
+│   │   │   │   ├── tol
+│   │   │   │   ├── verbose
+│   │   │   │   └── warm_start
+│   │   │   └── tags
+│   │   │       ├── mlflow.runName
+│   │   │       ├── mlflow.source.git.commit
+│   │   │       ├── mlflow.source.name
+│   │   │       ├── mlflow.source.type
+│   │   │       └── mlflow.user
+│   │   ├── meta.yaml
+│   │   └── models
+│   │       └── m-f01f10ae52a9445982207603fb0dae45
+│   │           ├── meta.yaml
+│   │           ├── metrics
+│   │           │   ├── accuracy
+│   │           │   ├── f1_score
+│   │           │   ├── false_negative
+│   │           │   ├── false_positive
+│   │           │   ├── precision
+│   │           │   ├── recall
+│   │           │   ├── roc_auc
+│   │           │   ├── true_negative
+│   │           │   └── true_positive
+│   │           ├── params
+│   │           │   ├── C
+│   │           │   ├── class_weight
+│   │           │   ├── dual
+│   │           │   ├── fit_intercept
+│   │           │   ├── intercept_scaling
+│   │           │   ├── l1_ratio
+│   │           │   ├── max_iter
+│   │           │   ├── model_name
+│   │           │   ├── n_jobs
+│   │           │   ├── penalty
+│   │           │   ├── random_state
+│   │           │   ├── solver
+│   │           │   ├── target
+│   │           │   ├── test_size
+│   │           │   ├── tol
+│   │           │   ├── verbose
+│   │           │   └── warm_start
+│   │           └── tags
+│   │               ├── mlflow.source.git.commit
+│   │               ├── mlflow.source.name
+│   │               ├── mlflow.source.type
+│   │               └── mlflow.user
 │   └── models
 ├── src
 │   ├── __init__.py
 │   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
 │   │   ├── analysis_utils.cpython-312.pyc
-│   │   └── cleaning_utils.cpython-312.pyc
+│   │   ├── api.cpython-312.pyc
+│   │   ├── cleaning_utils.cpython-312.pyc
+│   │   └── models.cpython-312.pyc
 │   ├── analysis_utils.py
+│   ├── api.py
 │   ├── cleaning_utils.py
-│   ├── cleanning.py
-│   └── init_mlflow.py
+│   ├── init_mlflow.py
+│   ├── models.py
+│   └── train.py
 ├── structure.txt
 ├── temp
-├── tests 
+├── tests
 │   ├── test_functionnal.py
 │   └── test_unit.py
 └── uv.lock
 
-15 directories, 24 files
+27 directories, 95 files
