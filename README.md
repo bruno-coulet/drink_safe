@@ -20,21 +20,20 @@ Le cycle de vie des données est segmenté au sein du répertoire `data/` :
 - `data/processed/water_std.csv` : Données imputées et standardisées via `StandardScaler`, obligatoires pour les modèles linéaires.
 
 ## Architecture MLOps et Persistance
-Le suivi des expériences repose sur une architecture hybride :
+Le suivi des entrainements repose sur une architecture hybride :
 1. **Serveur MLflow** : S'exécute de manière isolée dans un conteneur Docker, accessible sur le port `5000`.
 2. **Backend Store** : Les métadonnées et métriques sont enregistrées localement sur l'hôte dans un fichier de base de données SQLite `mlflow.db`.
 3. **Artifact Store** : Les fichiers de modèles sérialisés (`.pkl`) et les environnements sont stockés dans le répertoire local `runs/`, monté comme volume Docker vers `/app/runs`.
 
-Cette configuration garantit la persistance totale des données en dehors du cycle de vie du conteneur Docker.
+Cette configuration guaranties la persistance totale des données en dehors du cycle de vie du conteneur Docker.
 
-## Quickstart
+## Quickstart (Pipeline Complet)
 
 ### 1. Initialisation de l'environnement virtuel
 L'environnement et la synchronisation des dépendances sont gérés de manière optimisée par `uv` :
 ```bash
 # Installation et synchronisation des dépendances du projet
 uv sync
-
 ```
 
 ### 2. Démarrage de l'infrastructure Docker
@@ -44,7 +43,6 @@ Le serveur de suivi MLflow doit être instancié en arrière-plan avant toute ex
 ```bash
 # Lancement du serveur MLflow via Docker Compose
 docker compose up -d
-
 ```
 
 ### 3. Cycle de Pré-traitement et d'Entraînement
@@ -55,8 +53,41 @@ Le pipeline s'exécute séquentiellement depuis le terminal WSL2 :
 # Génération des datasets (via l'exécution séquentielle du Notebook ou des scripts dédiés)
 # Lancement de la suite d'entraînement multi-modèles
 uv run src/train.py
-
 ```
+
+## Quickstart Allégé (Lancement Rapide Production)
+
+Cette procédure permet de démarrer immédiatement l'application complète pour tester l'interface utilisateur et réaliser des prédictions en temps réel, sans passer par la phase de ré-entraînement des modèles.
+
+### 1. Démarrer l'infrastructure et l'API Backend
+
+Dans un premier terminal WSL2, initialisez l'environnement et lancez le serveur d'API (FastAPI) qui chargera automatiquement le modèle de référence depuis le Model Registry :
+
+```bash
+# Synchroniser l'environnement virtuel local
+uv sync
+
+# Lancer le conteneur Docker MLflow (nécessaire pour l'API)
+docker compose up -d
+
+# Lancer le serveur backend API sur le port 8000
+uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+### 2. Démarrer l'interface Frontend
+
+Ouvrez un **second terminal WSL2** indépendant et lancez l'application graphique Streamlit :
+
+```bash
+# Lancer l'interface utilisateur sur le port 8501
+uv run streamlit run front/app.py
+```
+
+### 3. Effectuer une prédiction
+
+* Ouvrez votre navigateur web sur votre machine hôte Windows à l'adresse : [http://localhost:8501](https://www.google.com/search?q=http://localhost:8501)
+* Ajustez les curseurs des paramètres physico-chimiques de l'eau.
+* Cliquez sur le bouton **Analyser l'échantillon** pour recevoir instantanément le diagnostic de potabilité.
 
 ## Protocole d'Expérimentation
 
@@ -68,3 +99,5 @@ Afin d'évaluer l'impact des pré-traitements sur la performance, deux configura
 | **Random Forest** | `water_imputed.csv` (Brut) | `n_estimators=100`, `n_jobs=-1` | Accuracy, F1-Score, Precision, Recall |
 
 L'analyse comparative des performances et l'accès au Model Registry s'effectuent via l'interface graphique unifiée à l'adresse suivante : `http://127.0.0.1:5000`.
+
+
