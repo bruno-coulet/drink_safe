@@ -112,7 +112,11 @@ def executer_pipeline_entrainement(
         mlflow.log_metrics(metriques)
 
         # Enregistrement de l'artefact
-        mlflow.sklearn.log_model(sk_model=modele, artifact_path="model")
+        mlflow.sklearn.log_model(
+            sk_model=modele, 
+            artifact_path="model",
+            registered_model_name="WaterPotabilityBaseline"
+        )
 
 
 if __name__ == "__main__":

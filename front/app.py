@@ -26,7 +26,7 @@ st.write(
 st.markdown("---")
 
 # 3. Formulaire de saisie des caractéristiques de l'eau
-st.subheader("📊 Paramètres de l'échantillon")
+st.subheader("Paramètres de l'échantillon")
 
 # On crée deux colonnes pour rendre le formulaire plus compact et élégant
 col1, col2 = st.columns(2)
@@ -51,7 +51,7 @@ turbidity = st.slider("Turbidité (NTU)", min_value=0.0, max_value=7.0, value=4.
 st.markdown("---")
 
 # 4. Bouton de prédiction et appel à l'API
-if st.button("🚀 Analyser l'échantillon", type="primary"):
+if st.button("Analyser l'échantillon", type="primary"):
     
     # Préparation du dictionnaire JSON au format exact attendu par l'API (Pydantic)
     payload = {
@@ -78,8 +78,7 @@ if st.button("🚀 Analyser l'échantillon", type="primary"):
                 
                 # Affichage du résultat avec un style adapté
                 if prediction == 1:
-                    st.success(f"### 🎉 Résultat : L'eau est estimée **{status}** !")
-                    st.balloons()
+                    st.success(f"### L'eau est estimée **{status}** !")
                 else:
                     st.error(f"### ⚠️ Résultat : L'eau est estimée **{status}** (Impropre).")
             
