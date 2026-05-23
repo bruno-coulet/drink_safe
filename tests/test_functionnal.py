@@ -1,21 +1,37 @@
+"""
+-------------------------------------------------------------------------------
+Projet : Waterflow
+Composant : Tests / Fonctionnels
+Description : Validation des routes de l'API FastAPI, de la gestion des erreurs
+              et du respect du schéma des payloads d'entrée.
+-------------------------------------------------------------------------------
+"""
+
+from typing import Any
 from fastapi.testclient import TestClient
-import pytest
 from src.api import app
 
-# On initialise le client de test en lui passant ton application FastAPI
-client = TestClient(app)
+client: TestClient = TestClient(app)
 
-def test_health_endpoint():
-    """Vérifie que la route de santé de l'API répond correctement."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    # On s'assure que la réponse contient bien le statut (green ou amber si MLflow est éteint)
-    assert "status" in response.json()
 
-def test_predict_validation_error():
-    """Vérifie que l'API bloque les requêtes si des données sont manquantes ou mal formées."""
-    # On envoie un dictionnaire vide pour forcer une erreur de validation Pydantic
-    response = client.post("/predict", json={})
+def test_route_sante_api() -> None:
+    """
+    Vérifie que le point d'accès de vérification de santé répond avec un code
+    200 et un format JSON correct.
+    """
+    reponse = client.get("/health")
+    assert reponse.status_code == 200
     
-    # FastAPI doit renvoyer un code 422 (Unprocessable Entity)
-    assert response.status_code == 422
+    donnees: dict[str, Any] = reponse.json()
+    assert "status" in donnees
+    assert donnees["status"] in ["green", "amber"]
+
+
+def test_prediction_erreur_validation_pydantic() -> None:
+    """
+    Vérifie que l'API rejette explicitement (code 422) une requête dont
+    le payload JSON ne respecte pas le modèle de données obligatoire.
+    """
+    # Envoi d'un payload vide pour forcer l'échec de la validation Pydantic
+    reponse = client.post("/predict", json={})
+    assert reponse.status_code == 422
