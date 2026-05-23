@@ -9,7 +9,7 @@ Description : Garantit que les performances ou les sorties du modèle de base
 
 from typing import Any
 import pandas as pd
-from src.api import ml_models
+from src.api_old import ml_models
 
 
 def test_non_regression_comportement_modele() -> None:

@@ -9,7 +9,7 @@ Description : Validation des routes de l'API FastAPI, de la gestion des erreurs
 
 from typing import Any
 from fastapi.testclient import TestClient
-from src.api import app
+from src.api_old import app
 
 client: TestClient = TestClient(app)
 

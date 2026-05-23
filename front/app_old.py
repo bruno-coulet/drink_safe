@@ -1,15 +1,10 @@
-"""
--------------------------------------------------------------------------------
-Projet : Waterflow (Potabilité de l'eau)
-Composant : Interface Utilisateur (Frontend)
-Description : Application Streamlit permettant de configurer un échantillon d'eau
-              et de requêter l'API de prédiction.
--------------------------------------------------------------------------------
-"""
+'''
+application Stremlit
+'''
 
-import os
 import streamlit as st
 import requests
+import os
 
 # 1. Configuration de la page
 st.set_page_config(
@@ -18,7 +13,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Configuration de la route d'API
+# URL de l'API, localhost en local, mais on prévoit une variable d'environnement pour le futur VPS
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/predict")
 
 # 2. Header de l'application
@@ -30,16 +25,16 @@ st.write(
 st.markdown("---")
 
 st.subheader("Configuration du modèle")
-# Sélection utilisateur intuitive
+# Boîte de sélection pour l'algorithme
 model_display = st.selectbox(
     "Choisissez l'algorithme d'analyse :",
     ["Régression Logistique (Données Standardisées)", "Random Forest (Données Brutes)"]
 )
 
-# Mapping direct vers les noms exacts des classes d'objets Python
+# Correspondance entre l'affichage et la clé technique attendue par l'API FastAPI
 model_mapping = {
-    "Régression Logistique (Données Standardisées)": "LogisticRegression",
-    "Random Forest (Données Brutes)": "RandomForestClassifier"
+    "Régression Logistique (Données Standardisées)": "logistic_regression",
+    "Random Forest (Données Brutes)": "random_forest"
 }
 selected_model_key = model_mapping[model_display]
 
@@ -47,6 +42,8 @@ st.markdown("---")
 
 # 3. Formulaire de saisie des caractéristiques de l'eau
 st.subheader("Paramètres de l'échantillon")
+
+# On crée deux colonnes pour rendre le formulaire plus compact et élégant
 col1, col2 = st.columns(2)
 
 with col1:
@@ -61,6 +58,7 @@ with col2:
     organic_carbon = st.slider("Carbone Organique Total (ppm)", min_value=0.0, max_value=30.0, value=14.2, step=0.1)
     trihalomethanes = st.slider("Trihalométhanes (μg/L)", min_value=0.0, max_value=130.0, value=66.3, step=0.1)
 
+# La turbidité prend toute la largeur en bas
 st.markdown(" ")
 st.write("**Clarté de l'eau**")
 turbidity = st.slider("Turbidité (NTU)", min_value=0.0, max_value=7.0, value=4.0, step=0.1)
@@ -70,7 +68,7 @@ st.markdown("---")
 # 4. Bouton de prédiction et appel à l'API
 if st.button("Analyser l'échantillon", type="primary"):
     
-    # Payload aligné sur le schéma strict de l'API
+    # Préparation du dictionnaire JSON au format exact attendu par l'API (Pydantic)
     payload = {
         "model_choice": selected_model_key,
         "ph": ph,
@@ -86,6 +84,7 @@ if st.button("Analyser l'échantillon", type="primary"):
     
     with st.spinner("Analyse en cours par l'algorithme..."):
         try:
+            # Envoi de la requête POST au backend FastAPI
             response = requests.post(API_URL, json=payload, timeout=10)
             
             if response.status_code == 200:
@@ -93,13 +92,14 @@ if st.button("Analyser l'échantillon", type="primary"):
                 prediction = result["prediction"]
                 status = result["status"]
                 
+                # Affichage du résultat avec un style adapté
                 if prediction == 1:
-                    st.success(f"### 🎉 Résultat : L'eau est estimée **{status}** !")
+                    st.success(f"### L'eau est estimée **{status}** !")
                 else:
                     st.error(f"### ⚠️ Résultat : L'eau est estimée **{status}** (Impropre).")
             
             elif response.status_code == 503:
-                st.warning(f"🎛️ Le modèle sélectionné ({selected_model_key}) n'est pas encore instancié sur MLflow.")
+                st.warning("🎛️ Le serveur est en ligne mais le modèle n'a pas encore été chargé depuis MLflow.")
             else:
                 st.error(f"❌ Erreur du serveur (Code {response.status_code}) : {response.text}")
                 

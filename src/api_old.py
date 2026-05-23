@@ -2,8 +2,9 @@
 -------------------------------------------------------------------------------
 Projet : Waterflow (Potabilité de l'eau)
 Composant : API Backend de Prédiction
-Description : Serveur FastAPI chargeant les modèles de classification depuis 
-              le Model Registry de MLflow pour effectuer des prédictions.
+Description : Serveur FastAPI chargeant le modèle de classification depuis 
+              le Model Registry de MLflow pour effectuer des prédictions en 
+              temps réel.
 -------------------------------------------------------------------------------
 """
 
@@ -16,25 +17,31 @@ import pandas as pd
 import mlflow
 import mlflow.sklearn
 
+# MODEL_NAME: str = "WaterPotabilityBaseline"
+# # Utilisation de la version 1 du modèle généré par le run de test initial
+# MODEL_VERSION: str = "1"
+
+MODEL_LOGISTIC_REGRESSION = "WaterPotabilityBaseline"  # Modèle 1
+MODEL_RANDOM_FOREST = "WaterPotabilityRandomForest"      # Modèle 2 (à enregistrer via train.py)
+
 # Configuration de la connexion à MLflow Dockerisé
 MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-# Le dictionnaire global qui stocke les instances de modèles chargées
+
+
+# Dictionnaire global pour encapsuler le modèle de manière isolée
 ml_models: dict[str, Any] = {}
 
-# Liste des classes d'algorithmes supportées (évolutive)
-ALGOS = ["LogisticRegression", "RandomForestClassifier", "MLPClassifier"]
 
-
+# schéma Pydantic
 class WaterFeatures(BaseModel):
     """
     Modèle de données Pydantic définissant la structure stricte
     des paramètres physico-chimiques d'un échantillon d'eau.
+    Les clés doivent correspondre exactement aux colonnes du jeu d'entraînement.
     """
-    model_choice: Literal["LogisticRegression", "RandomForestClassifier", "MLPClassifier"] = Field(
-        ..., description="Le nom de la classe du modèle à requêter"
-    )
+    model_choice: Literal["logistic_regression", "random_forest"] = Field(..., description="Le modèle à utiliser pour la prédiction")
     ph: float = Field(..., description="Potentiel Hydrogène de l'eau (0-14)", example=7.2)
     Hardness: float = Field(..., description="Dureté de l'eau en mg/L", example=200.0)
     Solids: float = Field(..., description="Total des solides dissous en ppm", example=20000.0)
@@ -46,21 +53,45 @@ class WaterFeatures(BaseModel):
     Turbidity: float = Field(..., description="Turbidité de l'eau en NTU", example=4.0)
 
 
+
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+# async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+#     """
+#     Gère le cycle de vie de l'application FastAPI pour charger le modèle
+#     au démarrage et libérer les ressources à l'extinction.
+#     """
+#     try:
+#         # URI pointant vers la version spécifique enregistrée dans le registre
+#         model_uri: str = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
+#         ml_models["water_model"] = mlflow.sklearn.load_model(model_uri)
+#         print(f"✅ Modèle '{MODEL_NAME}' version {MODEL_VERSION} chargé avec succès depuis MLflow.")
+#     except Exception as e:
+#         print(f"⚠️ Impossible de charger le modèle depuis MLflow Registry: {e}")
+#         print("Mode dégradé : l'API fonctionne mais les prédictions renverront une erreur 503.")
+#         ml_models["water_model"] = None
+        
+#     yield
+#     ml_models.clear()
+# Liste des suffixes de modèles que vous prévoyez d'utiliser
+ALGOS = ["LogisticRegression", "RandomForestClassifier", "MLPClassifier"]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Charge dynamiquement tous les modèles disponibles dans le registre au démarrage."""
     for algo in ALGOS:
         nom_registre = f"WaterModel_{algo}"
         try:
             # Tente de charger la version 1 de chaque modèle existant
             ml_models[algo] = mlflow.sklearn.load_model(f"models:/{nom_registre}/1")
-            print(f"✅ Modèle {nom_registre} chargé avec succès.")
+            print(f"✅ {nom_registre} chargé avec succès.")
         except Exception:
+            # Si le modèle n'est pas encore entraîné, on l'ignore proprement
             print(f"ℹ️ {nom_registre} non disponible dans le registre (pas encore entraîné).")
             ml_models[algo] = None
             
     yield
     ml_models.clear()
+    
 
 
 app = FastAPI(
@@ -73,40 +104,48 @@ app = FastAPI(
 
 @app.get("/health", tags=["Utility"])
 def health_check() -> dict[str, str]:
-    """Vérifie l'état de disponibilité globale de l'API backend."""
-    modeles_charges = [k for k, v in ml_models.items() if v is not None]
-    if not modeles_charges:
-        return {"status": "amber", "message": "API active mais aucun modèle n'est chargé."}
-    return {"status": "green", "message": f"API opérationnelle. Modèles actifs : {modeles_charges}"}
+    """
+    Vérifie l'état de disponibilité de l'API et du modèle prédictif.
+    """
+    if ml_models.get("water_model") is None:
+        return {"status": "amber", "message": "API active mais modèle non chargé."}
+    return {"status": "green", "message": "API et modèle opérationnels."}
 
 
+# endpoint de prédiction
 @app.post("/predict", tags=["Prediction"])
 def predict_potability(data: WaterFeatures) -> dict[str, Any]:
-    """Aiguille la requête vers le modèle choisi et renvoie la prédiction."""
+    """
+    Récupère les paramètres d'un échantillon, applique le modèle de classification
+    et retourne la prédiction binaire associée au statut textuel.
+    """
+
+    # 'data.model_choice' contiendra directement la chaîne "RandomForestClassifier" ou "LogisticRegression"
     model = ml_models.get(data.model_choice)
     
     if not model:
         raise HTTPException(
             status_code=503, 
-            detail=f"Le modèle {data.model_choice} n'est pas actif ou disponible sur le serveur."
+            detail=f"Le modèle {data.model_choice} n'est pas actif ou disponible."
         )
     
     try:
-        # Extraction du payload et exclusion du paramètre technique de choix
+        # Conversion stricte des données Pydantic en DataFrame Pandas
+        # input_data: pd.DataFrame = pd.DataFrame([data.model_dump()])
+        # Extrait les données en excluant le champ 'model_choice' qui ne sert pas au modèle
         raw_data = data.model_dump()
         choice = raw_data.pop("model_choice")
         
         input_data = pd.DataFrame([raw_data])
         
-        # Inférence Scikit-Learn
+        # Exécution de la prédiction via Scikit-Learn
         prediction = model.predict(input_data)
         potability_result: int = int(prediction[0])
         status_label: str = "Potable" if potability_result == 1 else "Non Potable"
         
         return {
             "prediction": potability_result,
-            "status": status_label,
-            "model_used": choice
+            "status": status_label
         }
     except Exception as e:
         raise HTTPException(

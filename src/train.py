@@ -111,12 +111,31 @@ def executer_pipeline_entrainement(
         mlflow.log_params(configuration_modele)
         mlflow.log_metrics(metriques)
 
-        # Enregistrement de l'artefact
+        # # Enregistrement de l'artefact
+        # mlflow.sklearn.log_model(
+        #     sk_model=modele, 
+        #     artifact_path="model",
+        #     registered_model_name="WaterPotabilityBaseline"
+        # )
+        
+
+        # Extraction dynamique du nom de la classe du modèle
+        # Si Pipeline (ex: avec StandardScaler intégré), utilisez : modele.steps[-1][1].__class__.__name__
+        # Sinon : :
+        name_class_model: str = modele.__class__.__name__
+        
+        # Formatage standardisé du nom pour le Model Registry (ex: WaterModel_RandomForestClassifier)
+        dynamic_name_register: str = f"WaterModel_{name_class_model}"
+
+        # Enregistrement sans aucune condition 'if' en dur
         mlflow.sklearn.log_model(
             sk_model=modele, 
             artifact_path="model",
-            registered_model_name="WaterPotabilityBaseline"
+            registered_model_name=dynamic_name_register
         )
+        print(f"📦 Modèle enregistré dynamiquement sous le nom : {dynamic_name_register}")
+
+
 
 
 if __name__ == "__main__":
