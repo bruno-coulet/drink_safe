@@ -4,17 +4,20 @@ Projet : Waterflow (Potabilité de l'eau)
 Composant : Entraînement Automatisé / MLOps
 Description : Découvre, entraîne et versionne à la volée tous les modèles 
               déclarés dans 'src/models.py' sur leur dataset idéal.
+              Vérifie la disponibilité du serveur MLflow avant le lancement.
 -------------------------------------------------------------------------------
 """
 
 from pathlib import Path
 from typing import Any
 import pandas as pd
+import requests
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import mlflow
 import mlflow.sklearn
-# Importation dynamique du catalogue de models
+
+# Importation dynamique du catalogue de modèles
 from src.models import get_models
 
 def executer_pipeline_entrainement(
@@ -27,7 +30,7 @@ def executer_pipeline_entrainement(
     """
     Entraîne une instance de modèle donnée et pousse les métriques/artifacts sur MLflow.
     """
-    # 1. Connexion et configuration MLflow
+    # 1. Configuration MLflow
     uri_suivi: str = f"http://{hote_mlflow}:{port_mlflow}"
     mlflow.set_tracking_uri(uri_suivi)
     
@@ -61,7 +64,6 @@ def executer_pipeline_entrainement(
             "recall": float(recall_score(y_val, predictions, average="binary"))
         }
 
-        # Enregistrement des paramètres extraits directement de l'instance
         mlflow.log_param("model_name", type_modele)
         mlflow.log_param("dataset_type", suffixe_dataset)
         mlflow.log_params(inst_modele.get_params(deep=False))
@@ -69,34 +71,56 @@ def executer_pipeline_entrainement(
 
         dynamic_name_register: str = f"WaterModel_{type_modele}"
         mlflow.sklearn.log_model(sk_model=inst_modele, artifact_path="model", registered_model_name=dynamic_name_register)
-        print(f"✅ Version poussée pour : {dynamic_name_register} ({suffixe_dataset})")
+        print(f"✅ Version poussee avec succes pour : {dynamic_name_register} ({suffixe_dataset})")
 
 
 if __name__ == "__main__":
+    HOTE = "127.0.0.1"
+    PORT = 5000
+    URI_SERVEUR = f"http://{HOTE}:{PORT}"
+
+    print("🔍 Verification de la disponibilite du serveur MLflow...")
+    
+    # ---- SÉCURITÉ : VERIFICATION DU SERVEUR DE TRACKING ----
+    try:
+        # On tente d'appeler rapidement l'API de santé native de MLflow
+        reponse = requests.get(f"{URI_SERVEUR}/health", timeout=3)
+        if reponse.status_code == 200:
+            print(f"✅ Serveur MLflow detecte et joignable sur {URI_SERVEUR}")
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        print("\n" + "!" * 80)
+        print(f"ERREUR CRITIQUE : Le serveur de tracking MLflow est INJOIGNABLE sur {URI_SERVEUR}")
+        print("Veuillez demarrer le serveur dans un autre terminal avant de lancer ce script :")
+        print(f"uv run mlflow server --backend-store-uri ./runs --host {HOTE} --port {PORT}")
+        print("!" * 80 + "\n")
+        # On arrête proprement le script ici pour éviter le crash en cascade
+        exit(1)
+    # --------------------------------------------------------
+
     RACINE: Path = Path(__file__).resolve().parent.parent
     NOM_EXP: str = "experiment_water_quality"
 
     DATA_IMPUTED: Path = RACINE / "data" / "processed" / "water_imputed.csv"
     DATA_STANDARD: Path = RACINE / "data" / "processed" / "water_std.csv"
 
-    # Récupère les modèles de models.py
+    # Découverte automatique des modèles
     dictionnaire_modeles = get_models()
-
-    print(f"il y a{len(dictionnaire_modeles)} modèles dans src/models.py. Alignement des pipelines...")
+    print(f"🔍 {len(dictionnaire_modeles)} modeles decouverts dans src/models.py. Alignement des pipelines...")
 
     for cle, instance in dictionnaire_modeles.items():
         nom_classe = instance.__class__.__name__
         
-        # RÈGLE MÉTIER AUTOMATIQUE : 
-        # Les modèles linéaires et de Deep Learning ont besoin de données standardisées
+        # Attribution du bon dataset
         if "Logistic" in nom_classe or "MLP" in nom_classe or "SVC" in nom_classe:
             dataset_cible = DATA_STANDARD
         else:
-            # Les modèles d'arbres (RandomForest, XGBoost) prennent les données brutes
             dataset_cible = DATA_IMPUTED
             
+        print(f"⏳ Entrainement en cours pour {nom_classe}...")
         executer_pipeline_entrainement(
             chemin_donnees=dataset_cible,
             nom_experience=NOM_EXP,
-            inst_modele=instance
+            inst_modele=instance,
+            hote_mlflow=HOTE,
+            port_mlflow=PORT
         )

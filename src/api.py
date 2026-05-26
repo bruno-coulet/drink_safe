@@ -18,7 +18,7 @@ import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 
 # Configuration de la connexion à MLflow Dockerisé
-MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 # Le dictionnaire global qui stocke les instances de modèles chargées
