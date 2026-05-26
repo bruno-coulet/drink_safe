@@ -14,7 +14,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import mlflow
 import mlflow.sklearn
-
 # Importation dynamique du catalogue de models
 from src.models import get_models
 
@@ -80,10 +79,10 @@ if __name__ == "__main__":
     DATA_IMPUTED: Path = RACINE / "data" / "processed" / "water_imputed.csv"
     DATA_STANDARD: Path = RACINE / "data" / "processed" / "water_std.csv"
 
-    # Découverte automatique des modèles du projet
+    # Récupère les modèles de models.py
     dictionnaire_modeles = get_models()
 
-    print(f"🔍 {len(dictionnaire_modeles)} modèles découverts dans src/models.py. Alignement des pipelines...")
+    print(f"il y a{len(dictionnaire_modeles)} modèles dans src/models.py. Alignement des pipelines...")
 
     for cle, instance in dictionnaire_modeles.items():
         nom_classe = instance.__class__.__name__

@@ -45,7 +45,6 @@ def get_models() -> dict[str, Any]:
             random_state=RANDOM_STATE
         ),
 
-        # Ajout du Perceptron Multicouches (Deep Learning) requis par les consignes
         "mlp_classifier": MLPClassifier(
             hidden_layer_sizes=(100, 50),
             max_iter=500,
