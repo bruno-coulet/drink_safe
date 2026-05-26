@@ -83,19 +83,27 @@ st.write(
 st.markdown("---")
 
 st.subheader("Choisissez le modèle")
-# Sélection utilisateur intuitive
 model_display = st.selectbox(
     # "Choisissez l'algorithme d'analyse :",
     "",
-    ["Régression Logistique (Données Standardisées)", "Random Forest (Données Brutes)"]
+    [
+        "Régression Logistique (Données Standardisées)", 
+        "Random Forest (Données Brutes)",
+        "XGBoost Classifier (Données Brutes)",
+        "Perceptron Multicouches - MLP (Données Standardisées)"
+    ]
 )
 
-# Mapping direct vers les noms exacts des classes d'objets Python
+# Le mapping pointe vers les noms exacts des classes d'objets Python
 model_mapping = {
     "Régression Logistique (Données Standardisées)": "LogisticRegression",
-    "Random Forest (Données Brutes)": "RandomForestClassifier"
+    "Random Forest (Données Brutes)": "RandomForestClassifier",
+    "XGBoost Classifier (Données Brutes)": "XGBClassifier",
+    "Perceptron Multicouches - MLP (Données Standardisées)": "MLPClassifier"
 }
 selected_model_key = model_mapping[model_display]
+
+
 
 st.markdown("---")
 

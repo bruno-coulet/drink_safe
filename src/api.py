@@ -121,21 +121,36 @@ def predict_potability(data: WaterFeatures) -> dict[str, Any]:
     Applique un garde-fou physico-chimique strict avant de solliciter le modèle ML.
     """
     # ---- COUCHE GARDE-FOU METIER (Business Rules) ----
-    # Si le pH est extrêmement acide (< 5.0) ou basique (> 10.0), l'eau est d'office impropre.
-    # Tu peux ajuster ces seuils selon les directives de ton projet.
-    if data.ph < 5.0 or data.ph > 10.0:
+    # 1. Sécurité pH (Selon normes OMS)
+    if data.ph < 6.5 or data.ph > 8.5:  # Seuils officiels stricts du document
         return {
             "prediction": 0,
             "status": "Non Potable",
-            "decision_reason": "Garde-fou automatique : pH extrême détecté, hors limites de sécurité physiques."
+            "decision_reason": "Garde-fou : pH hors des limites permissibles de l'OMS (6.5 - 8.5)."
         }
     
-    # Tu peux ajouter d'autres règles (ex: Turbidité supérieure à un seuil critique)
-    if data.Turbidity > 6.5:
+    # 2. Sécurité Turbidité (Seuil critique OMS)
+    if data.Turbidity > 5.0:
         return {
             "prediction": 0,
             "status": "Non Potable",
-            "decision_reason": "Garde-fou automatique : Turbidité trop élevée, eau trop opaque."
+            "decision_reason": "Garde-fou : Turbidité supérieure à la recommandation maximale de l'OMS (5.0 NTU)."
+        }
+
+    # 3. Sécurité Chloramines (Toxicité chimique)
+    if data.Chloramines > 4.0:
+        return {
+            "prediction": 0,
+            "status": "Non Potable",
+            "decision_reason": "Garde-fou : Concentration en chloramines supérieure au seuil de sécurité (4.0 mg/L)."
+        }
+
+    # 4. Sécurité Trihalométhanes (Toxicité chimique sous-produits)
+    if data.Trihalomethanes > 80.0:
+        return {
+            "prediction": 0,
+            "status": "Non Potable",
+            "decision_reason": "Garde-fou : Taux de trihalométhanes supérieur au seuil de sécurité (80.0 ppm)."
         }
     # --------------------------------------------------
 

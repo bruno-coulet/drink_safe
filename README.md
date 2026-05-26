@@ -121,6 +121,23 @@ Afin d'évaluer l'impact des pré-traitements sur la performance, deux configura
 L'analyse comparative des performances et l'accès au Model Registry s'effectuent via l'interface graphique unifiée de MLflow à l'adresse suivante : `http://127.0.0.1:5000`.
 
 
+
+## Implémentation d'une couche "Garde-fou Métier" (Business Rules)
+Afin de pallier les aberrations mathématiques et les défauts d'extrapolations des modèles de Machine Learning sur les valeurs extrêmes<br>   
+Parexemple: un pH de 1 classé comme potable par manque de données similaires à l'entraînement<br>   
+
+Une couche de règles métiers strictes a été intégrée en amont de l'inférence. Basée sur les seuils sanitaires et toxicologiques de l'OMS et de l'US EPA<br>  
+
+Elle filtre et rejette automatiquement l'échantillon si
+- pH < 6.5 ou pH > 8.5
+- turbidité >5.0 NTU
+- chloramines >4.0 mg/L
+- trihalométhanes >80 ppm dépassent les limites de sécurité vitales.<br>
+
+Ce couplage garantit la sécurité de l'utilisateur tout en laissant le modèle arbitrer les corrélations minérales complexes (sulfates, conductivité, dureté).
+
+
+
 ## Conclusion et Perspectives
 
 Le projet **Waterflow** démontre la viabilité d'une infrastructure MLOps moderne, découplée et hautement automatisée sous environnement WSL2. L'intégration réussie de la chaîne de liaison (**Frontend Streamlit $\rightarrow$ Backend FastAPI $\rightarrow$ Model Registry MLflow via Docker**) fournit un cadre industriel robuste pour le déploiement de modèles de Machine Learning.
