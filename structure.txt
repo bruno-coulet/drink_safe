@@ -6,100 +6,71 @@
 ├── consignes.txt
 ├── data
 │   ├── processed
-│   │   └── water_imputed.csv
+│   │   ├── water_imputed.csv
+│   │   └── water_std.csv
 │   ├── raw
 │   │   └── water_potability.csv
 │   └── water_quality_description.txt
-├── docker
 ├── docker-compose.yml
-├── experiment.py
 ├── front
-│   └── app.py
-├── mlflow.db
+│   ├── __pycache__
+│   │   └── app.cpython-312.pyc
+│   ├── app.py
+│   ├── app_old.py
+│   └── assets
+│       ├── eau.webp
+│       └── eau.webp:Zone.Identifier
 ├── notebooks
 │   ├── __init__.py
 │   └── eda.ipynb
 ├── pyproject.toml
 ├── runs
-│   ├── 749990774911543448
-│   │   ├── 76f8ec3c5c844e1cbd56f428ce3343f9
-│   │   │   ├── artifacts
-│   │   │   ├── meta.yaml
-│   │   │   ├── metrics
-│   │   │   │   ├── accuracy
-│   │   │   │   ├── f1_score
-│   │   │   │   ├── false_negative
-│   │   │   │   ├── false_positive
-│   │   │   │   ├── precision
-│   │   │   │   ├── recall
-│   │   │   │   ├── roc_auc
-│   │   │   │   ├── true_negative
-│   │   │   │   └── true_positive
-│   │   │   ├── outputs
-│   │   │   │   └── m-f01f10ae52a9445982207603fb0dae45
-│   │   │   │       └── meta.yaml
-│   │   │   ├── params
-│   │   │   │   ├── C
-│   │   │   │   ├── class_weight
-│   │   │   │   ├── dual
-│   │   │   │   ├── fit_intercept
-│   │   │   │   ├── intercept_scaling
-│   │   │   │   ├── l1_ratio
-│   │   │   │   ├── max_iter
-│   │   │   │   ├── model_name
-│   │   │   │   ├── n_jobs
-│   │   │   │   ├── penalty
-│   │   │   │   ├── random_state
-│   │   │   │   ├── solver
-│   │   │   │   ├── target
-│   │   │   │   ├── test_size
-│   │   │   │   ├── tol
-│   │   │   │   ├── verbose
-│   │   │   │   └── warm_start
-│   │   │   └── tags
-│   │   │       ├── mlflow.runName
-│   │   │       ├── mlflow.source.git.commit
-│   │   │       ├── mlflow.source.name
-│   │   │       ├── mlflow.source.type
-│   │   │       └── mlflow.user
-│   │   ├── meta.yaml
-│   │   └── models
-│   │       └── m-f01f10ae52a9445982207603fb0dae45
-│   │           ├── meta.yaml
-│   │           ├── metrics
-│   │           │   ├── accuracy
-│   │           │   ├── f1_score
-│   │           │   ├── false_negative
-│   │           │   ├── false_positive
-│   │           │   ├── precision
-│   │           │   ├── recall
-│   │           │   ├── roc_auc
-│   │           │   ├── true_negative
-│   │           │   └── true_positive
-│   │           ├── params
-│   │           │   ├── C
-│   │           │   ├── class_weight
-│   │           │   ├── dual
-│   │           │   ├── fit_intercept
-│   │           │   ├── intercept_scaling
-│   │           │   ├── l1_ratio
-│   │           │   ├── max_iter
-│   │           │   ├── model_name
-│   │           │   ├── n_jobs
-│   │           │   ├── penalty
-│   │           │   ├── random_state
-│   │           │   ├── solver
-│   │           │   ├── target
-│   │           │   ├── test_size
-│   │           │   ├── tol
-│   │           │   ├── verbose
-│   │           │   └── warm_start
-│   │           └── tags
-│   │               ├── mlflow.source.git.commit
-│   │               ├── mlflow.source.name
-│   │               ├── mlflow.source.type
-│   │               └── mlflow.user
 │   └── models
+│       ├── m-1f340361b1344cf88d280851c4fe4050
+│       │   └── artifacts
+│       │       ├── MLmodel
+│       │       ├── conda.yaml
+│       │       ├── model.pkl
+│       │       ├── python_env.yaml
+│       │       └── requirements.txt
+│       ├── m-21749a61e53341cfbc03416caca82fcd
+│       │   └── artifacts
+│       │       ├── MLmodel
+│       │       ├── conda.yaml
+│       │       ├── model.pkl
+│       │       ├── python_env.yaml
+│       │       ├── registered_model_meta
+│       │       └── requirements.txt
+│       ├── m-2713c2404c6c4bd5b09c5d06d87c724f
+│       │   └── artifacts
+│       │       ├── MLmodel
+│       │       ├── conda.yaml
+│       │       ├── model.pkl
+│       │       ├── python_env.yaml
+│       │       ├── registered_model_meta
+│       │       └── requirements.txt
+│       ├── m-534788a6705743489acf8875e925f63d
+│       │   └── artifacts
+│       │       ├── MLmodel
+│       │       ├── conda.yaml
+│       │       ├── model.pkl
+│       │       ├── python_env.yaml
+│       │       ├── registered_model_meta
+│       │       └── requirements.txt
+│       ├── m-932fdfc253394e30970e97bb2fb716e8
+│       │   └── artifacts
+│       │       ├── MLmodel
+│       │       ├── conda.yaml
+│       │       ├── model.pkl
+│       │       ├── python_env.yaml
+│       │       └── requirements.txt
+│       └── m-fbded0af52fe4050a348914b39c6fd72
+│           └── artifacts
+│               ├── MLmodel
+│               ├── conda.yaml
+│               ├── model.pkl
+│               ├── python_env.yaml
+│               └── requirements.txt
 ├── src
 │   ├── __init__.py
 │   ├── __pycache__
@@ -110,15 +81,21 @@
 │   │   └── models.cpython-312.pyc
 │   ├── analysis_utils.py
 │   ├── api.py
+│   ├── api_old.py
 │   ├── cleaning_utils.py
 │   ├── init_mlflow.py
 │   ├── models.py
 │   └── train.py
 ├── structure.txt
-├── temp
+├── test.py
 ├── tests
+│   ├── __pycache__
+│   │   ├── test_functionnal.cpython-312-pytest-9.0.3.pyc
+│   │   ├── test_non_regression.cpython-312-pytest-9.0.3.pyc
+│   │   └── test_unit.cpython-312-pytest-9.0.3.pyc
 │   ├── test_functionnal.py
+│   ├── test_non_regression.py
 │   └── test_unit.py
 └── uv.lock
 
-27 directories, 95 files
+27 directories, 72 files

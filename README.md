@@ -119,3 +119,18 @@ Afin d'évaluer l'impact des pré-traitements sur la performance, deux configura
 | **WaterModel_RandomForestClassifier** | `water_imputed.csv` (Brut) | `n_estimators=100`, `n_jobs=-1` | Accuracy, F1-Score, Precision, Recall | `RandomForestClassifier` |
 
 L'analyse comparative des performances et l'accès au Model Registry s'effectuent via l'interface graphique unifiée de MLflow à l'adresse suivante : `http://127.0.0.1:5000`.
+
+
+## Conclusion et Perspectives
+
+Le projet **Waterflow** démontre la viabilité d'une infrastructure MLOps moderne, découplée et hautement automatisée sous environnement WSL2. L'intégration réussie de la chaîne de liaison (**Frontend Streamlit $\rightarrow$ Backend FastAPI $\rightarrow$ Model Registry MLflow via Docker**) fournit un cadre industriel robuste pour le déploiement de modèles de Machine Learning.
+
+### Principaux Jalons Atteints :
+1. **Génie Logiciel & Typage Stricte** : Adoption de `uv` pour une gestion déterministe des dépendances, et structuration de l'API avec des schémas Pydantic typés.
+2. **Registre de Modèles Dynamique** : Suppression des structures conditionnelles rigides (`if/else`) à l'entraînement et au déploiement au profit d'un mapping basé sur la réflexion d'objets Python (`__class__.__name__`), rendant la stack 100 % extensible.
+3. **Qualité et Non-Régression** : Sécurisation du pipeline par l'implémentation de trois niveaux de tests (`pytest`) couvrant les aspects unitaires, fonctionnels et de stabilité prédictive.
+
+### Perspectives d'Évolution :
+* **Recherche de Performance (Modélisation)** : Intégration de nouveaux algorithmes de classification (comme le Perceptron Multicouches `MLPClassifier` ou XGBoost) à l'aide de la même nomenclature automatisée.
+* **Optimisation des Hyperparamètres** : Automatisation du tuning (via Optuna ou GridSearch) avec historisation des runs parents/enfants directement dans l'interface de tracking MLflow.
+* **Industrialisation CI/CD** : Intégration des tests automatisés dans une pipeline GitHub Actions pour bloquer le push ou le déploiement sur le VPS en cas de régression logicielle ou métrique.
