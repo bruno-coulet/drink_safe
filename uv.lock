@@ -2910,6 +2910,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "flask" },
     { name = "mlflow" },
     { name = "pandas" },
     { name = "scikit-learn" },
@@ -2932,6 +2933,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "flask", specifier = ">=3.1.3" },
     { name = "mlflow", specifier = ">=2.11.0" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "scikit-learn", specifier = ">=1.4.0" },
