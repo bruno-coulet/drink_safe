@@ -24,17 +24,15 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 # Le dictionnaire global qui stocke les instances de modèles chargées
 ml_models: dict[str, Any] = {}
 
-# Liste des classes d'algorithmes supportées (évolutive)
-ALGOS = ["LogisticRegression", "RandomForestClassifier", "MLPClassifier"]
+# # Liste des classes d'algorithmes supportées (évolutive)
+# ALGOS = ["LogisticRegression", "RandomForestClassifier", "MLPClassifier"]
 
 
 class WaterFeatures(BaseModel):
     """
     Modèle de données Pydantic définissant la structure stricte
     des paramètres physico-chimiques d'un échantillon d'eau.
-    """
-    # model_choice: Literal["LogisticRegression", "RandomForestClassifier", "MLPClassifier"] = Field(..., description="Le nom de la classe du modèle à requêter")
-    
+    """    
     # Accepte n'importe quelle chaîne envoyée par le front
     model_choice: str = Field(..., description="Nom de la classe du modèle à interroger (ex: LogisticRegression)")
     ph: float = Field(..., description="Potentiel Hydrogène de l'eau (0-14)", example=7.2)
@@ -48,21 +46,7 @@ class WaterFeatures(BaseModel):
     Turbidity: float = Field(..., description="Turbidité de l'eau en NTU", example=4.0)
 
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-#     """Charge dynamiquement tous les modèles disponibles dans le registre au démarrage."""
-#     for algo in ALGOS:
-#         nom_registre = f"WaterModel_{algo}"
-#         try:
-#             # Tente de charger la version 1 de chaque modèle existant
-#             ml_models[algo] = mlflow.sklearn.load_model(f"models:/{nom_registre}/1")
-#             print(f"✅ Modèle {nom_registre} chargé avec succès.")
-#         except Exception:
-#             print(f"ℹ️ {nom_registre} non disponible dans le registre (pas encore entraîné).")
-#             ml_models[algo] = None
-            
-#     yield
-#     ml_models.clear()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -185,3 +169,7 @@ def predict_potability(data: WaterFeatures) -> dict[str, Any]:
             status_code=500,
             detail=f"Erreur interne lors de l'exécution de la prédiction: {str(e)}"
         )
+    
+
+@app.post("/auth", tags=["Utility"])
+def auth_user()

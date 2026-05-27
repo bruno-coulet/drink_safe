@@ -70,9 +70,9 @@ css = f"""
 st.markdown(css, unsafe_allow_html=True)
 
 
-
-# Configuration de la route d'API
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/predict")
+# Configuration des routes d'API
+API_URL = os.getenv("API_URL", "http://localhost:8000/predict") # Optionnel/Ancien Backend
+URL_MIDDLEWARE = "http://localhost:8080/api/v1/analyse"         # Nouveau couloir unique
 
 # 2. Header de l'application
 st.title("💧 Évaluation de la Potabilité de l'Eau")
@@ -148,7 +148,8 @@ if st.button("Analyser l'échantillon", type="primary"):
     
     with st.spinner("Analyse en cours par l'algorithme..."):
         try:
-            response = requests.post(API_URL, json=payload, timeout=10)
+            # response = requests.post(API_URL, json=payload, timeout=10)
+            response = requests.post(URL_MIDDLEWARE, json=payload)
             
             if response.status_code == 200:
                 result = response.json()

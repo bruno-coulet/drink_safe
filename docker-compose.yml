@@ -1,13 +1,26 @@
+# services:
+#   mlflow-back:
+#     build: .
+#     container_name: mlflow-back
+#     ports:
+#       - "5000:5000"
+#     # volumes:
+#     #   - ./runs:/app/runs
+#     #   - ./artifacts:/app/artifacts
+#     volumes:
+#       - ./runs:/app/runs
+#       - ./artifacts:/app/artifacts
+#     restart: unless-stopped
+
 services:
+
   mlflow-back:
-    build: .
+    image: waterflow-mlflow-back
     container_name: mlflow-back
     ports:
       - "5000:5000"
-    # volumes:
-    #   - ./runs:/app/runs
-    #   - ./artifacts:/app/artifacts
     volumes:
       - ./runs:/app/runs
       - ./artifacts:/app/artifacts
-    restart: unless-stopped
+    # On utilise le backend de type fichier pointant sur /app/runs
+    command: mlflow server --backend-store-uri /app/runs --default-artifact-root /app/runs --host 0.0.0.0 --port 5000

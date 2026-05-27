@@ -38,7 +38,16 @@ uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
 *Documentation Swagger interactive disponible sur :*   
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### 3. Terminal 3 : Interface Frontend (Streamlit)
+
+### 3. Terminal 3 : Middleware (Flask)
+Lance le serveur Flask pour qu'il écoute sur le port 8080
+```bash
+uv run python src/middleware.py
+```
+
+
+
+### 4. Terminal 4 : Interface Frontend (Streamlit)
 
 Ouvrez un troisième terminal à la racine et lancez l'interface de démonstration utilisateur :
 
