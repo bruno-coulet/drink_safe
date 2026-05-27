@@ -38,6 +38,36 @@
 
 🟣 **Afin de** <span style="color:#9b51e0; font-weight:bold;">garantir la haute disponibilité de la plateforme et intervenir rapidement en cas d'incident technique.</span>
 
+
+User Storie #5 : Transparence et conformité RGPD
+🔵 En tant que <span style="color:#2f80ed; font-weight:bold;">Client final</span> 🟠 Je veux <span style="color:#f2994a; font-weight:bold;">connaître les données personnelles associées à mon compte (ID, adresse, historique d'accès) et les règles de conservation</span> 🟣 Afin d' <span style="color:#9b51e0; font-weight:bold;">être informé en toute transparence et de m'assurer que la plateforme respecte les directives du RGPD
+.</span>
+User Storie #6 : Analyse ciblée et filtres multicritères
+
+
+🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span> 
+
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir filtrer les prélèvements par client, zone, date et provenance (OCR ou saisie manuelle)</span> 
+
+🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">mener des analyses ciblées et réaliser des contrôles qualité précis sur des sous-ensembles de données
+.</span>
+User Storie #7 : MLOps et Rejeu des prédictions
+
+
+🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span> 
+
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir rejouer une prédiction sur un prélèvement passé et la comparer avec les différentes versions du modèle enregistrées sous MLflow</span> 
+🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">vérifier l'impact des nouvelles versions d'entraînement du modèle sur des dossiers d'analyses sensibles
+.</span>
+User Storie #8 : Suivi des incidents et MCO (Maintien en Condition Opérationnelle)
+
+🔵 En tant que <span style="color:#2f80ed; font-weight:bold;">Responsable d'Exploitation</span> 
+
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir documenter et suivre la résolution d'incidents techniques (erreurs d'API, échecs d'extraction OCR, dérive des données)</span> 
+
+🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">garantir le maintien en condition opérationnelle de la plateforme et historiser les actions correctives
+.</span>
+
 ---
 
 ## 2. Règles de Gestion : Comptes et Sécurité
@@ -70,13 +100,24 @@ Chaque entité cliente de la collectivité possède un profil persistant en base
 * **Modes de transmission** : Dispose de deux routes d'ingestion distinctes (JSON structuré ou Fichier non structuré via OCR).
 * **Restitution** : Accède à une interface simplifiée (IHM Streamlit) filtrée sur son propre identifiant pour suivre ses analyses.
 
+* **Transparence RGPD** : Dispose d'un accès (via l'API ou l'interface) pour consulter ses données personnelles stockées et les durées de conservation appliquées (lien avec la documentation RGPD.md)
+
 ### B. Analyste Qualité
 * **Vision Métier Globale** : Ne subit aucune restriction sur la lecture des données de prélèvements pour mener ses analyses statistiques.
 * **Évaluation de la Dérive (Drift)** : S'assure que les données envoyées par les clients ne divergent pas des distributions apprises à l'entraînement par les modèles sous MLflow.
 
+* **Contrôle croisé** : Peut appliquer des filtres avancés (date, provenance, client) sur le flux de données
+
+* **Versioning ML** : Possède la capacité d'effectuer du Shadow Testing ou de rejouer des prédictions via l'intégration MLflow pour comparer les modèles
+
 ### C. Responsable d’Exploitation
 * **Garant du SLA** : Surveille les métriques d'infrastructure. Il valide que le couplage entre le Middleware Flask et le serveur d'inférence FastAPI ne génère pas de goulots d'étranglement ou de latences anormales.
 * **Audit Trail** : Accède aux journaux d'appels pour tracer l'utilisation des clés API et détecter d'éventuels abus ou anomalies de requêtage.
+
+* **Gestion des incidents** : Historise et suit la résolution des anomalies systèmes (pannes API, timeout OCR) via des fiches d'incidents techniques
+
+
+
 
 <!-- # User stories principales
 
