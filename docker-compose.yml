@@ -24,3 +24,21 @@ services:
       - ./artifacts:/app/artifacts
     # On utilise le backend de type fichier pointant sur /app/runs
     command: mlflow server --backend-store-uri /app/runs --default-artifact-root /app/runs --host 0.0.0.0 --port 5000
+
+
+# SERVEUR DE BASE DE DONNÉES
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: admin_waterflow
+      POSTGRES_PASSWORD: xxxxxxx
+      POSTGRES_DB: waterflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
