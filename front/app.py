@@ -194,7 +194,7 @@ if fichier_importe is not None:
                 
                 if reponse_ocr.status_code == 200:
                     data_json = reponse_ocr.json()
-                    st.success("Analyse OCR terminée avec succès (Simulation) !")
+                    st.success("Analyse OCR terminée avec succès !")
                     
                     # Affichage propre des données structurées extraites
                     st.json(data_json["extracted_data"])
