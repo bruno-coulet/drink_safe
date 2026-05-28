@@ -172,4 +172,10 @@ def predict_potability(data: WaterFeatures) -> dict[str, Any]:
     
 
 @app.post("/auth", tags=["Utility"])
-def auth_user()
+def auth_user():
+    """
+    Route d'authentification simulée.
+    En production, cette route serait remplacée par une solution d'authentification robuste
+    (ex: OAuth2, JWT, ou intégration avec un service d'identité).
+    """
+    return {"message": "Authentification simulée réussie. Implémentation à venir."}

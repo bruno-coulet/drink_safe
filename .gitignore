@@ -27,3 +27,5 @@ GEMINI*.md
 # MLflow local data
 runs/
 artifacts/
+
+test.py

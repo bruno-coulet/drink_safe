@@ -42,7 +42,7 @@ uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
 ### 3. Terminal 3 : Middleware (Flask)
 Lance le serveur Flask pour qu'il écoute sur le port 8080
 ```bash
-uv run python src/middleware.py
+uv run python src/run_middleware.py
 ```
 
 

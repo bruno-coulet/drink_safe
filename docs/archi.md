@@ -5,10 +5,59 @@
 - gestion de la clé API
 - intégration OCR
 
+![archi](../img/archi_.png)
 
-Flask n'est pas un serveur d'affichage (IHM). C'est un Middleware / API REST Pure.
-L'affichage (IHM) est géré à 100 % par Streamlit dans ton dossier front/.
-Flask va uniquement recevoir du JSON, manipuler la base de données, appeler l'OCR, et renvoyer du JSON.
+graph LR
+    subgraph Acteurs
+        C[Client final<br/>clé API]
+        E[Expert<br/>UI Streamlit]
+    end
+
+    subgraph "API UNIQUE (Middleware Flask)"
+        API["<b>Modules métier</b><br/>/data<br/>/predict<br/>/ocr"]
+    end
+
+    subgraph Stockage et Services
+        BDD[(BDD<br/>PostgreSQL)]
+        OCR[OCR.space<br/>externe]
+    end
+
+    C --> API
+    E --> API
+    API --> BDD
+    API -.-> OCR
+
+    style OCR stroke-dasharray: 5 5, fill:#fff3cd, stroke:#ffc107
+    style API fill:#e2f0d9, stroke:#548235
+    style BDD fill:#ddebf7, stroke:#2e75b6
+
+
+**Flask** n'est pas un serveur d'affichage (IHM)   
+C'est un Middleware / API REST Pure   
+L'affichage (IHM) est géré à 100 % par Streamlit dans ton dossier front/   
+Flask va uniquement :
+- recevoir du JSON
+- manipuler la base de données
+- appeler l'OCR
+- renvoyer du JSON.
+
+## Architecture du Middleware (API Unifiée)
+
+Pour répondre aux exigences d'industrialisation du projet Waterflow 2, nous avons fait le choix de consolider les différents services en une API principale structurée en modules. Cette architecture permet de partager une même base de code et une même base de données pour les différentes fonctionnalités (Data, Model, OCR).
+
+Le cœur de cette logique est implémenté dans le dossier `src/middleware/` qui agit comme le chef d'orchestre de l'application :
+
+* **`routes.py` (Routage et Endpoints) :** Centralise l'exposition des API. Il gère les trois routes principales demandées :
+  * **API Data** (`/api/measurements`, `/api/clients`) : Pour le dépôt et la consultation des prélèvements filtrés par clé API client.
+  * **API Model** (`/api/predict`) : Pour faire le pont avec le modèle de Machine Learning existant (Waterflow 1) via MLflow.
+  * **API OCR** (`/api/ocr/lab-report`) : Pour la réception des fiches de laboratoire et le transfert au moteur d'extraction.
+* **`bdd.py` (Couche Accès Données) :** Gère la connexion à la base de données relationnelle (PostgreSQL/MariaDB). Il assure la création des clients, la vérification des clés API (sécurité), et la persistance des prélèvements (norme RGPD et isolation des données par client).
+* **`ocr_engine.py` (Service d'Ingestion Documentaire) :** S'occupe de la communication avec l'API tierce (ex: OCR.space). Il prend en charge l'envoi du fichier PDF/Image, la récupération du JSON renvoyé par l'OCR, et le parsing pour extraire les mesures physico-chimiques avant de les transmettre à la base de données.
+* **`config.py` (Configuration Globale) :** Centralise la gestion des variables d'environnement (clés API externes, URI de la base de données, ports, etc.), assurant ainsi une conteneurisation Docker propre et sécurisée.
+
+Cette architecture en middleware permet une séparation claire des responsabilités (separation of concerns), facilitant ainsi l'écriture de nos tests automatisés (unitaires et d'intégration) via PyTest.
+
+
 
 ### BDD - Comparatif : SQLite vs MariaDB vs PostgreSQL
 

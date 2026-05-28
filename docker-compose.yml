@@ -12,33 +12,52 @@
 #       - ./artifacts:/app/artifacts
 #     restart: unless-stopped
 
+# services:
+
+#   mlflow-back:
+#     image: waterflow-mlflow-back
+#     container_name: mlflow-back
+#     ports:
+#       - "5000:5000"
+#     volumes:
+#       - ./runs:/app/runs
+#       - ./artifacts:/app/artifacts
+#     # On utilise le backend de type fichier pointant sur /app/runs
+#     command: mlflow server --backend-store-uri /app/runs --default-artifact-root /app/runs --host 0.0.0.0 --port 5000
+
 services:
 
-  mlflow-back:
-    image: waterflow-mlflow-back
-    container_name: mlflow-back
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./runs:/app/runs
-      - ./artifacts:/app/artifacts
-    # On utilise le backend de type fichier pointant sur /app/runs
-    command: mlflow server --backend-store-uri /app/runs --default-artifact-root /app/runs --host 0.0.0.0 --port 5000
-
-
-# SERVEUR DE BASE DE DONNÉES
+  # 1. SERVEUR DE BASE DE DONNÉES (POSTGRESQL)
   postgres-db:
     image: postgres:16-alpine
     container_name: postgres-db
     environment:
       POSTGRES_USER: admin_waterflow
-      POSTGRES_PASSWORD: xxxxxxx
+      POSTGRES_PASSWORD: MonMotDePasseSecurise123! # Aligné avec .env
       POSTGRES_DB: waterflow_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+
+  # 2. SERVEUR DE TRACKING MLFLOW
+  mlflow-back:
+    image: waterflow-mlflow-back
+    container_name: mlflow-back
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres-db # Attend que Postgres soit allumé
+    volumes:
+      - ./artifacts:/app/artifacts
+    # Utilise l'URI postgresql interne au réseau Docker
+    command: >
+      mlflow server 
+      --backend-store-uri postgresql://admin_waterflow:MonMotDePasseSecurise123!@postgres-db:5432/waterflow_db 
+      --default-artifact-root /app/artifacts 
+      --host 0.0.0.0 
+      --port 5000
 
 volumes:
   postgres_data:

@@ -10,7 +10,6 @@ Description : Application Streamlit permettant de configurer un échantillon d'e
 import os
 from pathlib import Path
 import base64
-
 import requests
 import streamlit as st
 
@@ -157,16 +156,50 @@ if st.button("Analyser l'échantillon", type="primary"):
                 status = result["status"]
                 
                 if prediction == 1:
-                    st.success(f"### 🎉 Résultat : L'eau est estimée **{status}** !")
+                    st.success(f"### L'eau est estimée **{status}** !")
                 else:
-                    st.error(f"### ⚠️ Résultat : L'eau est estimée **{status}** (Impropre).")
+                    st.error(f"### L'eau est estimée **{status}** (Impropre).")
             
             elif response.status_code == 503:
-                st.warning(f"🎛️ Le modèle sélectionné ({selected_model_key}) n'est pas encore instancié sur MLflow.")
+                st.warning(f"Le modèle sélectionné ({selected_model_key}) n'est pas encore instancié sur MLflow.")
             else:
                 st.error(f"❌ Erreur du serveur (Code {response.status_code}) : {response.text}")
                 
         except requests.exceptions.ConnectionError:
             st.error("🔌 Impossible de contacter l'API FastAPI. Vérifie qu'elle est bien lancée sur le port 8000.")
         except Exception as e:
-            st.error(f"💥 Une erreur inattendue est survenue : {e}")
+            st.error(f"❌ Une erreur inattendue est survenue : {e}")
+
+
+
+# 5. =====    Téléchargement d'image pour OCR (en développement)  ==============================
+st.markdown("---")
+st.subheader("Ingestion automatisée par Rapport Laboratoire (OCR)")
+
+# Ajout du type PDF conformément aux spécifications du projet
+fichier_importe = st.file_uploader("Glissez-déposez une fiche laboratoire (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
+
+if fichier_importe is not None:
+    if st.button("Lancer l'extraction OCR", type="secondary"):
+        with st.spinner("Extraction du texte et des métriques en cours..."):
+            
+            # Préparation du fichier binaire sous forme de dictionnaire de fichiers pour requests
+            fichiers_payload = {
+                'file': (fichier_importe.name, fichier_importe.getvalue(), fichier_importe.type)
+            }
+            
+            try:
+                URL_OCR_FLASK = "http://localhost:8080/api/v1/upload-ocr"
+                reponse_ocr = requests.post(URL_OCR_FLASK, files=fichiers_payload)
+                
+                if reponse_ocr.status_code == 200:
+                    data_json = reponse_ocr.json()
+                    st.success("Analyse OCR terminée avec succès (Simulation) !")
+                    
+                    # Affichage propre des données structurées extraites
+                    st.json(data_json["extracted_data"])
+                else:
+                    st.error(f"❌ Erreur Middleware (Code {reponse_ocr.status_code}) : {reponse_ocr.text}")
+                    
+            except requests.exceptions.ConnectionError:
+                st.error("🔌 Le Middleware Flask (Port 8080) est injoignable. Lance-le !")
