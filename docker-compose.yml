@@ -52,13 +52,16 @@ services:
       - postgres-db
     volumes:
       - ./artifacts:/app/artifacts
-    # Reconstruit dynamiquement l'URL d'accès en utilisant les variables du .env
-    command: >
-      mlflow server 
-      --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
+    # LA SÉQUENCE MAGIQUE : On installe le driver puis on lance le serveur
+    entrypoint: >
+      bash -c "
+      pip install --no-cache-dir psycopg2-binary && 
+      mlflow server
+      --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db 
       --default-artifact-root /app/artifacts 
       --host 0.0.0.0 
-      --port 5000
+      --port 5000"
+
 
 volumes:
   postgres_data:
