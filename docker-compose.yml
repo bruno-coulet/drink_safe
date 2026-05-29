@@ -1,39 +1,10 @@
-# services:
-#   mlflow-back:
-#     build: .
-#     container_name: mlflow-back
-#     ports:
-#       - "5000:5000"
-#     # volumes:
-#     #   - ./runs:/app/runs
-#     #   - ./artifacts:/app/artifacts
-#     volumes:
-#       - ./runs:/app/runs
-#       - ./artifacts:/app/artifacts
-#     restart: unless-stopped
-
-# services:
-
-#   mlflow-back:
-#     image: waterflow-mlflow-back
-#     container_name: mlflow-back
-#     ports:
-#       - "5000:5000"
-#     volumes:
-#       - ./runs:/app/runs
-#       - ./artifacts:/app/artifacts
-#     # On utilise le backend de type fichier pointant sur /app/runs
-#     command: mlflow server --backend-store-uri /app/runs --default-artifact-root /app/runs --host 0.0.0.0 --port 5000
-
 services:
-
   # 1. SERVEUR DE BASE DE DONNÉES (POSTGRESQL)
   postgres-db:
     image: postgres:16-alpine
     container_name: postgres-db
     environment:
       POSTGRES_USER: admin_waterflow
-      # MAGIE : Docker va chercher la variable dans ton fichier .env local
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: waterflow_db
     ports:
@@ -41,27 +12,43 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_waterflow -d waterflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-# 2. SERVEUR DE TRACKING MLFLOW (IMAGE OFFICIELLE AVEC DRIVERS)
+# 2. SERVEUR DE TRACKING MLFLOW
   mlflow-back:
-    image: ghcr.io/mlflow/mlflow:v2.11.3
+    build:
+      context: .
+      dockerfile: docker/mlflow/Dockerfile
     container_name: mlflow-back
     ports:
       - "5000:5000"
     depends_on:
-      - postgres-db
+        postgres-db:
+          condition: service_healthy
     volumes:
-      - ./artifacts:/app/artifacts
-    # LA SÉQUENCE MAGIQUE : On installe le driver puis on lance le serveur
-    entrypoint: >
-      bash -c "
-      pip install --no-cache-dir psycopg2-binary && 
+      - mlflow_artifacts:/app/artifacts
+    restart: unless-stopped
+    command: >
       mlflow server
-      --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db 
-      --default-artifact-root /app/artifacts 
-      --host 0.0.0.0 
-      --port 5000"
-
+      --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
+      --default-artifact-root /app/artifacts
+      --host 0.0.0.0
+      --port 5000
 
 volumes:
   postgres_data:
+  mlflow_artifacts:
+
+
+
+ 
+
+ # Modification ici : utilisation du volume nommé
+   
+
+
+

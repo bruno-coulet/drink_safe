@@ -17,6 +17,9 @@ wheels/
 data/*
 temp/*
 
+
+img/
+
 # Asssitants IA
 CLAUDE.md
 consignes.txt

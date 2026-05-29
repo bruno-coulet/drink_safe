@@ -59,10 +59,6 @@ Bascule sur l'image officielle ghcr.io/mlflow/mlflow:v2.11.3 afin de standardise
 4. Gestion des Secrets
 Découplage strict entre la configuration et les données sensibles à l'aide d'un fichier d'environnement local .env (exclu du versionnage Git). Le fichier docker-compose.yml ne contient aucun mot de passe en clair, exploitant la syntaxe d'interpolation ${POSTGRES_PASSWORD} résolue à la volée par le moteur Docker.
 
- 
-```
-
-
 **Flask** n'est pas un serveur d'affichage (IHM)   
 C'est un Middleware / API REST Pure   
 L'affichage (IHM) est géré à 100 % par Streamlit dans ton dossier front/   

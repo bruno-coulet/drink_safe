@@ -23,8 +23,8 @@
 │   └── assets
 │       └── eau.webp
 ├── img
-│   ├── Architecture_de_solution_MLOps_industrialisée.png:Zone.Identifier
-│   └── archi_.png
+│   ├── archi_.png
+│   └── bdd.svg
 ├── notebooks
 │   ├── __init__.py
 │   └── eda.ipynb
