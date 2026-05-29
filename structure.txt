@@ -19,16 +19,17 @@
 │   ├── data_model.md
 │   └── user_stories.md
 ├── front
-│   ├── __pycache__
-│   │   └── app.cpython-312.pyc
 │   ├── app.py
 │   └── assets
 │       └── eau.webp
-├── mlflow.db
+├── img
+│   ├── Architecture_de_solution_MLOps_industrialisée.png:Zone.Identifier
+│   └── archi_.png
 ├── notebooks
 │   ├── __init__.py
 │   └── eda.ipynb
 ├── pyproject.toml
+├── run_middleware.py
 ├── runs
 │   ├── 261044254246259361
 │   │   ├── 433c42b13f8d43a586fe5821992d4e56
@@ -525,41 +526,35 @@
 │               ├── python_env.yaml
 │               └── requirements.txt
 ├── src
-│   ├── __init__.py
 │   ├── __pycache__
-│   │   ├── __init__.cpython-312.pyc
-│   │   ├── analysis_utils.cpython-312.pyc
-│   │   ├── api.cpython-312.pyc
-│   │   ├── cleaning_utils.cpython-312.pyc
-│   │   └── models.cpython-312.pyc
+│   │   └── api.cpython-312.pyc
 │   ├── analysis_utils.py
 │   ├── api.py
 │   ├── cleaning_utils.py
 │   ├── experiment.py
 │   ├── init_mlflow.py
 │   ├── middleware
-│   │   ├── __init__py
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   ├── config.cpython-312.pyc
+│   │   │   └── routes.cpython-312.pyc
 │   │   ├── bdd.py
 │   │   ├── config.py
 │   │   ├── ocr_engine.py
 │   │   └── routes.py
-│   ├── middleware.py
-│   └── models.py
+│   ├── models.py
+│   └── waterflow.egg-info
+│       ├── PKG-INFO
+│       ├── SOURCES.txt
+│       ├── dependency_links.txt
+│       ├── requires.txt
+│       └── top_level.txt
 ├── structure.txt
 ├── tests
-│   ├── __pycache__
-│   │   ├── test_functionnal.cpython-312-pytest-9.0.3.pyc
-│   │   ├── test_non_regression.cpython-312-pytest-9.0.3.pyc
-│   │   └── test_unit.cpython-312-pytest-9.0.3.pyc
 │   ├── test_functionnal.py
 │   ├── test_non_regression.py
 │   └── test_unit.py
-├── uv.lock
-└── waterflow.egg-info
-    ├── PKG-INFO
-    ├── SOURCES.txt
-    ├── dependency_links.txt
-    ├── requires.txt
-    └── top_level.txt
+└── uv.lock
 
-111 directories, 452 files
+110 directories, 448 files

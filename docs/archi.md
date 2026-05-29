@@ -7,29 +7,60 @@
 
 ![archi](../img/archi_.png)
 
-graph LR
-    subgraph Acteurs
-        C[Client final<br/>clé API]
-        E[Expert<br/>UI Streamlit]
+## Architecture Technique (Waterflow 2)
+
+## Schéma global de l'architecture
+
+```mermaid
+graph TD
+    subgraph Presentation [Couche Presentation]
+        UI[IHM Streamlit<br/>Port 8501]
     end
 
-    subgraph "API UNIQUE (Middleware Flask)"
-        API["<b>Modules métier</b><br/>/data<br/>/predict<br/>/ocr"]
+    subgraph Logique [Couche Logicielle]
+        Flask[Middleware Flask<br/>Port 8080]
     end
 
-    subgraph Stockage et Services
-        BDD[(BDD<br/>PostgreSQL)]
-        OCR[OCR.space<br/>externe]
+    subgraph Calcul [Couche Inference]
+        FastAPI[Serveur FastAPI<br/>Port 8000]
     end
 
-    C --> API
-    E --> API
-    API --> BDD
-    API -.-> OCR
+    subgraph MLOps [Couche Infrastructure Docker]
+        MLflow[MLflow Tracking Server<br/>Port 5000]
+        Postgres[(PostgreSQL 16<br/>Port 5432)]
+        Vols[(Volume Local<br/>artifacts)]
+    end
 
-    style OCR stroke-dasharray: 5 5, fill:#fff3cd, stroke:#ffc107
-    style API fill:#e2f0d9, stroke:#548235
-    style BDD fill:#ddebf7, stroke:#2e75b6
+    %% Flux et connexions
+    UI -->|1. Transmet Fichier ou Payload| Flask
+    Flask -->|2. Relaye les variables physico-chimiques| FastAPI
+    Flask -->|3. Persiste les mesures et Clients| Postgres
+    FastAPI -->|4. Interroge le Registre| MLflow
+    MLflow -->|5. Backend Store SQL| Postgres
+    MLflow -->|6. Artifact Store| Vols
+```
+
+Les choix techniques importants
+1. Découpage N-Tier et dissociation des ports
+Pour éviter de saturer l'interface utilisateur et garantir une haute disponibilité, chaque composant est isolé sur son propre port d'écoute :
+
+Streamlit (Port 8501) : Gère exclusivement la couche de présentation et l'affichage interactif.
+
+Flask (Port 8080) : Agit comme l'unique point d'entrée centralisé (Middleware). Il découple le Front de l'Intelligence Artificielle, valide les structures et gère la base de données.
+
+FastAPI (Port 8000) : Dédié à la performance brute de l'inférence mathématique et à l'application des garde-fous sanitaires de l'OMS.
+
+2. Structure de l'API & Modularité
+L'utilisation des Blueprints Flask permet de segmenter le routage réseau (avec le préfixe obligatoire /api/v1) de manière isolée dans src/middleware/routes.py. Cette approche évite les importations circulaires avec la fabrique d'application (create_app) tout en préparant l'application à une future intégration multi-tenant (gestion de plusieurs clients).
+
+3. Architecture Réseau & Conteneurisation
+Bascule sur l'image officielle ghcr.io/mlflow/mlflow:v2.11.3 afin de standardiser l'environnement de production. Pour surmonter l'absence native de drivers de base de données, l'injection du composant de liaison psycopg2-binary est orchestrée dynamiquement en mémoire au démarrage via un entrypoint bash sécurisé dans Docker.
+
+4. Gestion des Secrets
+Découplage strict entre la configuration et les données sensibles à l'aide d'un fichier d'environnement local .env (exclu du versionnage Git). Le fichier docker-compose.yml ne contient aucun mot de passe en clair, exploitant la syntaxe d'interpolation ${POSTGRES_PASSWORD} résolue à la volée par le moteur Docker.
+
+ 
+```
 
 
 **Flask** n'est pas un serveur d'affichage (IHM)   
