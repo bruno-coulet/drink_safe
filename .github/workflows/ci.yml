@@ -37,10 +37,12 @@ jobs:
 
       # Étape E : Il recrée ton environnement avec de fausses variables pour les tests
       - name: Création de l'environnement de Test (.env)
-        run: |
+        run:
+          # Ajout sans espace après le signe = et vérification de la chaîne
           echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "OCR_SPACE_API_KEY=helloworld" >> .env
           echo "SECRET_KEY=TestSecretKey" >> .env
+          echo "DATABASE_URL=postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@postgres-db:5432/waterflow_db" >> .env
 
       # Étape F : Il allume PostgreSQL et MLflow en tâche de fond (Docker)
       - name: Lancement de l'infrastructure Docker (BDD & MLflow)
