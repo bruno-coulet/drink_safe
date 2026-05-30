@@ -73,3 +73,38 @@ def inscrire_nouveau_client(payload: ClientCreate) -> Dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de l'accès à la base de données : {str(e)}"
         )
+    
+
+@router.get("/", status_code=status.HTTP_200_OK)
+def lister_clients() -> Dict[str, Any]:
+    """Récupère la liste de tous les clients enregistrés (Vue Administrateur)."""
+    query_select: str = "SELECT client_id, denomination, adresse, cree_le FROM clients;"
+    
+    try:
+        with psycopg2.connect(settings.DATABASE_URL) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query_select)
+                lignes = cursor.fetchall()
+                
+        # Formatage des résultats pour le JSON
+        liste_clients = [
+            {
+                "client_id": row[0],
+                "denomination": row[1],
+                "adresse": row[2],
+                "cree_le": row[3].isoformat() if row[3] else None
+            }
+            for row in lignes
+        ]
+        
+        return {
+            "status": "Succès",
+            "total_clients": len(liste_clients),
+            "clients": liste_clients
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la lecture de la base de données : {str(e)}"
+        )
