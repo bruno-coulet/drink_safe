@@ -2303,8 +2303,10 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "httpx" },
     { name = "ipykernel" },
     { name = "matplotlib" },
+    { name = "pytest" },
     { name = "seaborn" },
 ]
 test = [
@@ -2329,8 +2331,10 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "seaborn", specifier = ">=0.13.0" },
 ]
 test = [
