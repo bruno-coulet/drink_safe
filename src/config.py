@@ -39,7 +39,9 @@ class Settings:
    
     
     # Assemblage propre et sécurisé de la chaîne de connexion
-    DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+    # DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+    # nettoyer chaque composant individuellement
+    DATABASE_URL: str = f"postgresql://{DB_USER.strip()}:{DB_PASSWORD.strip()}@{DB_HOST.strip()}:5432/{DB_NAME.strip()}"
         
     # --- Configuration Dynamique MLflow ---
     MLFLOW_TRACKING_URI: str = "http://mlflow-back:5000" if IS_DOCKER else "http:// 127.0.0.1:5000"

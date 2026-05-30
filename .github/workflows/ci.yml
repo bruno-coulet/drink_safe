@@ -36,7 +36,8 @@ jobs:
         run: uv sync --frozen
 
       # Étape E : Il recrée ton environnement avec de fausses variables pour les tests
-      - name: Création de l'environnement de Test (.env)
+      - name: 🔐 Création de l'environnement de Test (.env)
+        shell: bash
         run: |
           echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
           echo "OCR_SPACE_API_KEY=helloworld" >> .env
