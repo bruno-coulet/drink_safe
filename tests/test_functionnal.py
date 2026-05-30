@@ -9,6 +9,7 @@ Description : Validation du scénario complet de bout en bout : enregistrement
 
 from typing import Any, Dict
 import unittest.mock as mock
+import uuid 
 from fastapi.testclient import TestClient
 import pytest
 
@@ -20,12 +21,17 @@ client = TestClient(app)
 
 def test_scenario_complet_bout_en_bout() -> None:
     """Valide le cycle de vie applicatif complet exigé par les spécifications."""
+
+
     
     # =========================================================================
-    # ÉTAPPE 1 : Enregistrement d'un nouveau client industriel
+    # ÉTAPE 1 : Enregistrement d'un nouveau client industriel (Dynamique)
     # =========================================================================
+    # Génération d'un ID unique pour éviter l'erreur 409 Conflict aux prochains tests
+    id_aleatoire = f"TEST_CORP_{uuid.uuid4().hex[:8].upper()}"
+    
     payload_client: Dict[str, Any] = {
-        "client_id": "INTEGRATION_TEST_CORP",
+        "client_id": id_aleatoire,
         "denomination": "Société d'Analyse des Eaux de Marseille",
         "adresse": "45 Rue de la République, 13002 Marseille"
     }
@@ -35,7 +41,7 @@ def test_scenario_complet_bout_en_bout() -> None:
     data_client = response_client.json()
     
     assert data_client["status"] == "Succès"
-    assert data_client["client_id"] == "INTEGRATION_TEST_CORP"
+    assert data_client["client_id"] == id_aleatoire # <-- Modification ici
     
     # Récupération de la clé API dynamique générée nativement par le système
     cle_api_generee: str = data_client["api_key"]
