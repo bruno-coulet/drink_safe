@@ -25,16 +25,19 @@ from src.routes.measurements import router as measurements_router
 from src.routes.predictions import router as predictions_router
 from src.routes.ocr import router as ocr_router
 
-
 # --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
 import requests
 _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
+
 def patched_prepare_headers(self, headers):
     _old_prepare_headers(self, headers)
-    # On écrase l'en-tête Host pour satisfaire Uvicorn/MLflow
-    self.headers["Host"] = "localhost:5000"
+    # On écrase l'en-tête Host UNIQUEMENT si la cible est le conteneur MLflow
+    if self.url and "mlflow-back" in self.url:
+        self.headers["Host"] = "localhost:5000"
+
 requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 # -----------------------------------------------------------
+
 
 # Configuration globale de la connexion à MLflow
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
