@@ -125,3 +125,34 @@ Une couche de règles métiers strictes est exécutée en amont de l'inférence.
 * Turbidité > 5.0 NTU
 * Chloramines > 4.0 mg/L
 * Trihalométhanes > 80 ppm
+
+
+## Guide de lancement : Développement vs Production
+
+Pour piloter le projet, il est important de choisir le mode de lancement adapté :
+
+1. Mode Production (Déploiement complet)
+Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec ses conteneurs isolés.
+
+```shell
+docker compose up -d
+```
+
+Cela lance tous les services (BDD, MLflow, API) de manière isolée et persistante.
+
+Accès API sur http://127.0.0.1:8000.
+
+2. Mode Développement (Édition de code)
+Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
+
+Pré-requis : 
+- Demarer les services de données lancés avec Docker
+    - `docker compose up -d postgres-db mlflow-back`
+- Arrêter le conteneur API
+    - `docker compose stop api-unique`
+
+```shell
+uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Le mode --reload redémarre l'API instantanément à chaque sauvegarde de fichier.
