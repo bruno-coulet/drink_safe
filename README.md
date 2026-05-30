@@ -1,187 +1,127 @@
-# Waterflow - Classification Binaire & MLOps
+# Waterflow 2
+## Centralisation API Unique, Ingestion OCR & MLOps
 
 ## Contexte du projet
-Ce projet est réalisé en binôme dans le cadre d'un [bachelor en développement en intelligence artificielle.](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/)   
-Il implémente un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
+Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).   
+Il implémente :
+- un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
+- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser l'analyse, le suivi, l'ingestion OCR et la prédiction. 
+    
+Réalisé sous l'environnement WSL2, le système intègre :
+- une interface utilisateur réactive (Streamlit).
+- une **API Unique unifiée (FastAPI)** gérant l'ingestion des données (Data), l'extraction documentaire (OCR) et les prédictions (Model) protégées par des garde-fous sanitaires.
+- un serveur de tracking et registre de modèles d'Intelligence Artificielle (MLflow) connecté à une base PostgreSQL.
 
+## Jeu de données
 Le jeu de données contient :
-- 9 mesures de la qualité de l'eau (features)
-- une étiquette (1 = potable, 0 = non potable)
 - 3 276 étendues d'eau différentes (observations)
+- 9 mesures physico-chimiques de la qualité de l'eau (features)
+- une étiquette binaire (1 = potable, 0 = non potable)
 
-Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace.   
-Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que [son descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
+
+Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que [son descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
+
 
 ---
----
----
-## Quickstart Allégé (Lancement Rapide Production)
 
-Cette procédure permet de démarrer immédiatement l'application complète pour tester l'interface utilisateur et réaliser des prédictions en temps réel, sans passer par la phase de ré-entraînement des modèles.
+## Quickstart (Lancement Rapide Production)
 
-### 1. Terminal 1 : Démarrer l'infrastructure Docker (MLflow)
-Assurez-vous que **Docker Desktop** est allumé, puis lancez le conteneur de tracking :
+Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
+
+### 1. Démarrer l'infrastructure et l'API
+Assurez-vous que **Docker Desktop** (avec intégration WSL2) est actif, puis déployez l'environnement (Base de données, serveur MLflow et API Unique) :
 ```bash
-docker compose up -d
+docker compose up -d postgres-db mlflow-back api-unique
 ```
 
-*L'interface graphique de suivi MLflow devient accessible sur :*   [http://127.0.0.1:5000](http://127.0.0.1:5000)
+L'interface graphique de suivi MLflow devient accessible sur : http://127.0.0.1:5000
+L'API Unique et sa documentation Swagger sont disponibles sur : http://127.0.0.1:8000/docs
 
-### 2. Terminal 2 : API Backend (FastAPI)
+### 2. Interface Frontend (Streamlit)
 
-Ouvrez un nouveau terminal à la racine. L'API va scanner le Model Registry de MLflow au démarrage pour charger l'ensemble de vos modèles d'IA en mémoire :
-
-```bash
-uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
-```
-
-*Documentation Swagger interactive disponible sur :*   
-[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-
-### 3. Terminal 3 : Middleware (Flask)
-Lance le serveur Flask pour qu'il écoute sur le port 8080
-```bash
-uv run python src/middleware.py
-```
-
-
-
-### 4. Terminal 4 : Interface Frontend (Streamlit)
-
-Ouvrez un troisième terminal à la racine et lancez l'interface de démonstration utilisateur :
+Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hôte local :
 
 ```bash
 uv run streamlit run front/app.py
 ```
 
-*Interface utilisateur disponible sur : [http://localhost:8501*](https://www.google.com/search?q=http://localhost:8501)
-
-### 4. Effectuer une prédiction
-
-* Ouvrir votre navigateur web sur [http://localhost:8501](https://www.google.com/search?q=http://localhost:8501).
-* Sélectionner l'algorithme souhaité dans le menu déroulant dynamique (**Régression Logistique**, **Random Forest**, **XGBoost**, ou **MLP Classifier**).
-* Ajuster les curseurs des paramètres physico-chimiques de l'eau.
-* Cliquer sur **Analyser l'échantillon** pour recevoir instantanément le diagnostic de potabilité sécurisé.
+Interface utilisateur disponible sur : http://localhost:8501
 
 ---
----
----
-
 
 ## Stack Technique Fixe
 
-* **Système d'exploitation** : WSL2 (Ubuntu 22.04 LTS) sur Windows 11
-* **Langage** : Python 3.12 (Dépendances clés : `scikit-learn`, `xgboost`, `pandas`, `fastapi`, `streamlit`)
-* **Gestionnaire de packages** : `uv` (Astral) - Configuration du projet comme package local via `pyproject.toml`
-* **MLOps** : MLflow (Tracking & Model Registry)
-* **Conteneurisation** : Docker & Docker Compose
+* **Système d'exploitation :** Windows 11 avec WSL2 (Ubuntu)
+* **Langage :** Python 3.12 (scikit-learn, xgboost, pandas, fastapi, streamlit)
+* **Gestionnaire de packages :** `uv` (Astral)
+* **MLOps :** MLflow (Tracking & Model Registry)
+* **Conteneurisation & Persistance :** Docker, Docker Compose & PostgreSQL 16
 
----
+### Structure des Données
 
-## Structure des Données
-
-Les données sont segmentées dans le répertoire `data/` :
+Les données sont segmentées et partagées avec les conteneurs dans le répertoire `data/` :
 
 * `data/raw/water_potability.csv` : Jeu de données brut d'origine.
-* `data/processed/water_imputed.csv` : Données nettoyées après imputation par la médiane, prêtes pour les algorithmes d'arbres (**Random Forest**, **XGBoost**).
-* `data/processed/water_std.csv` : Données imputées et standardisées via `StandardScaler`, obligatoires pour les modèles sensibles à la variance (**Régression Logistique**, **MLP Classifier**).
+* `data/processed/water_imputed.csv` : Données imputées par la médiane (pour Random Forest, XGBoost).
+* `data/processed/water_std.csv` : Données imputées et standardisées (pour Régression Logistique, MLP Classifier).
+
+### Architecture de la Stack Réseau
+
+L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
+
+| Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
+| --- | --- | --- | --- | --- |
+| **Interface UI** | Streamlit | 8501 | Hôte local (WSL2) | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
+| **API Unique** | FastAPI (`api-unique`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
+| **Registre MLOps** | MLflow (`mlflow-back`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
+| **Base de Données** | PostgreSQL 16 (`postgres-db`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
 
 ---
 
-## Architecture MLOps et Persistance
+## Architecture MLOps, Persistance Réseau & Sécurité
 
-Le suivi des entraînements repose sur une architecture hybride :
+### 1. Découplage BDD (Métadonnées) vs Volume Local (Artefacts)
 
-1. **Serveur MLflow** : S'exécute de manière isolée dans un conteneur Docker, accessible sur le port `5000`.
-2. **Backend Store** : Les métadonnées et métriques sont enregistrées localement sur l'hôte dans un fichier de base de données SQLite `mlflow.db`.
-3. **Artifact Store** : Les fichiers de modèles sérialisés (`.pkl`) et les environnements sont stockés dans le répertoire local `runs/`, monté comme volume Docker vers `/app/runs`.
+Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds (`.pkl`), l'architecture sépare physiquement le stockage :
 
-Cette configuration garantit la persistance totale des données en dehors du cycle de vie du conteneur Docker.
+* **Backend Store (BDD) :** MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
+* **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow-back`, `mlops-training` et `api-unique`.
+* **Lazy Loading Dynamique :** L'API charge les modèles en mémoire (RAM) à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant une résilience totale aux redémarrages.
+
+### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
+
+Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow-back:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
 
 ---
 
-## Quickstart (Pipeline Complet)
+## Scénarios d'Exécution & Cycle de Vie
 
-### 1. Initialisation de l'environnement virtuel
+**Pré-requis :** Créez un fichier `.env` à la racine du projet :
 
-L'environnement et la synchronisation des dépendances (groupes de développement et de test compris) sont gérés de manière optimisée par `uv` :
-
-```bash
-uv sync --group dev --group test
-uv pip install -e .
+```env
+POSTGRES_PASSWORD=MonMotDePasseSecurise123!
+OCR_SPACE_API_KEY=VotreCleApiOcrSpace
+SECRET_KEY=UneCleDeSessionSecurisee
 ```
 
-### 2. Démarrage de l'infrastructure Docker
+### Scénario : Entraînement Initial (MLOps Pipeline)
 
-Le serveur de suivi MLflow doit obligatoirement être instancié en arrière-plan avant toute exécution de pipeline :
+Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
 
-```bash
-docker compose up -d
-```
-
-### 3. Cycle de Pré-traitement et d'Entraînement Automatisé
-
-Le script d'expérimentation intègre une sécurité réseau qui valide la disponibilité du serveur MLflow sur le port 5000 avant de lancer les calculs. Il attribue automatiquement le bon dataset (`water_std.csv` ou `water_imputed.csv`) selon les exigences mathématiques de l'algorithme :
+1. Assurez-vous que l'infrastructure de base tourne (`postgres-db` et `mlflow-back`).
+2. Lancez le conteneur d'entraînement éphémère :
 
 ```bash
-uv run src/experiment.py
+docker compose up mlops-training
 ```
 
-*Note : L'alignement et l'entraînement des 4 modèles prend environ 1 à 2 minutes selon la puissance CPU de votre instance WSL2.*
+*Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.* Il entraîne les 4 architectures, publie les métriques et écrit les artefacts binaires dans le volume partagé avant de s'arrêter proprement (`exited with code 0`).
 
-### 4. Validation par la suite de tests logiciels
+### Couche "Garde-fou Métier" (Business Rules)
 
-L'application intègre 3 niveaux de tests (unitaires, fonctionnels paramétrés pour les 4 modèles, et TNR de non-régression) exécutables via `pytest` :
+Une couche de règles métiers strictes est exécutée en amont de l'inférence. Basée sur les seuils de l'OMS, elle rejette automatiquement l'échantillon (sans faire appel à l'IA) si les limites vitales sont dépassées :
 
-```bash
-uv run pytest -v
-```
-
----
-
-## Protocole d'Expérimentation
-
-Afin d'évaluer l'impact des pré-traitements sur la performance, quatre configurations de référence sont exécutées en parallèle au sein de l'expérience `experiment_water_quality` et publiées de façon automatisée dans le registre :
-
-| Modèle Enregistré | Dataset utilisé | Type de données | Clé API correspondante |
-| --- | --- | --- | --- |
-| **WaterModel_LogisticRegression** | `water_std.csv` | Standardisé | `LogisticRegression` |
-| **WaterModel_RandomForestClassifier** | `water_imputed.csv` | Brut / Imputé | `RandomForestClassifier` |
-| **WaterModel_XGBClassifier** | `water_imputed.csv` | Brut / Imputé | `XGBClassifier` |
-| **WaterModel_MLPClassifier** | `water_std.csv` | Standardisé | `MLPClassifier` |
-
-L'analyse comparative des performances s'effectue via l'interface graphique unifiée de MLflow à l'adresse suivante : `http://127.0.0.1:5000`.
-
----
-
-## Implémentation d'une couche "Garde-fou Métier" (Business Rules)
-
-Afin de pallier les aberrations mathématiques et les défauts d'extrapolations des modèles de Machine Learning sur les valeurs extrêmes (par exemple : un pH de 1 classé comme potable par manque de données similaires à l'entraînement), une couche de règles métiers strictes a été intégrée en amont de l'inférence.
-
-Basée sur les seuils sanitaires et toxicologiques de l'OMS et de l'US EPA, elle filtre et rejette automatiquement l'échantillon si les limites de sécurité vitales sont dépassées :
-
-* **pH** < 6.5 ou **pH** > 8.5
-* **Turbidité** > 5.0 NTU
-* **Chloramines** > 4.0 mg/L
-* **Trihalométhanes** > 80 ppm
-
-Ce couplage garantit la sécurité absolue de l'utilisateur tout en laissant le modèle de Machine Learning arbitrer les corrélations minérales et structurelles complexes (sulfates, conductivité, dureté).
-
----
-
-## Conclusion et Perspectives
-
-Le projet **Waterflow** démontre la viabilité d'une infrastructure MLOps moderne, découplée et hautement automatisée sous environnement WSL2. L'intégration réussie de la chaîne de liaison (**Frontend Streamlit $\rightarrow$ Backend FastAPI $\rightarrow$ Model Registry MLflow via Docker**) fournit un cadre industriel robuste pour le déploiement de modèles de Machine Learning.
-
-### Principaux Jalons Atteints :
-
-1. **Génie Logiciel & Typage Strict** : Configuration du projet comme package éditable local via `pyproject.toml`, adoption de `uv` pour une gestion déterministe, et structuration de l'API avec des schémas Pydantic.
-2. **Registre de Modèles Dynamique** : Suppression des structures conditionnelles rigides (`if/else`) à l'entraînement et au déploiement au profit d'un mapping basé sur la réflexion d'objets Python (`__class__.__name__`), rendant la stack 100 % extensible.
-3. **Qualité et Non-Régression** : Sécurisation du pipeline par l'implémentation de tests logiciels paramétrés couvrant simultanément l'ensemble de notre catalogue d'IA.
-
-### Perspectives d'Évolution (Vers Waterflow 2) :
-
-* **Persistance des Données Clients** : Modélisation d'une base de données relationnelle PostgreSQL pour tracer l'historique des requêtes d'analyses et assurer la conformité RGPD.
-* **Sécurisation des Accès** : Implémentation d'un système d'authentification par clé API unique par client pour restreindre l'utilisation des routes d'inférence.
-* **Ingestion de Rapports Automatisée** : Création d'un module d'OCR connecté pour parser des fiches d'analyses de laboratoire au format PDF ou image et alimenter automatiquement le pipeline.
+* pH < 6.5 ou pH > 8.5
+* Turbidité > 5.0 NTU
+* Chloramines > 4.0 mg/L
+* Trihalométhanes > 80 ppm

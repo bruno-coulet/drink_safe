@@ -17,6 +17,9 @@ wheels/
 data/*
 temp/*
 
+
+img/
+
 # Asssitants IA
 CLAUDE.md
 consignes.txt
@@ -27,3 +30,5 @@ GEMINI*.md
 # MLflow local data
 runs/
 artifacts/
+
+test.py

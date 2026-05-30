@@ -1,78 +1,156 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow
-Composant : Tests / Fonctionnels
-Description : Validation des routes de l'API FastAPI, de la gestion des erreurs,
-              des gardes-fous et de la paramétrisation des algorithmes.
+Projet : Waterflow 2
+Composant : Suite de Tests Fonctionnels et d'Intégration (PyTest)
+Description : Validation du scénario complet de bout en bout : enregistrement 
+              client, ingestion OCR, persistance PostgreSQL et inférence.
 -------------------------------------------------------------------------------
 """
 
-from typing import Any
-import pytest
+from typing import Any, Dict
+import unittest.mock as mock
+import uuid, time
 from fastapi.testclient import TestClient
+import pytest
+import psycopg2
+from src.config import settings
+
 from src.api import app
 
-client: TestClient = TestClient(app)
-
-# Liste des algorithmes pris en charge par l'infrastructure
-LISTE_ALGOS = ["LogisticRegression", "RandomForestClassifier", "XGBClassifier", "MLPClassifier"]
+# Instanciation du client de test FastAPI
+client = TestClient(app)
 
 
-def test_route_sante_api() -> None:
-    """Vérifie le point d'accès de statut de l'API."""
-    reponse = client.get("/health")
-    assert reponse.status_code == 200
+def test_verif_connexion_bdd():
+    """Vérifie que la BDD est joignable avant de lancer les tests fonctionnels."""
+    try:
+        conn = psycopg2.connect(settings.DATABASE_URL)
+        conn.close()
+    except Exception as e:
+        pytest.fail(f"La base de données n'est pas joignable pour les tests : {e}")
+
+
+
+
+def test_scenario_complet_bout_en_bout() -> None:
+    """Valide le cycle de vie applicatif complet exigé par les spécifications."""
     
-    donnees: dict[str, Any] = reponse.json()
-    assert "status" in donnees
-    assert donnees["status"] in ["green", "amber"]
-
-
-def test_prediction_erreur_validation_pydantic() -> None:
-    """Vérifie le rejet d'un payload invalide."""
-    reponse = client.post("/predict", json={})
-    assert reponse.status_code == 422
-
-
-@pytest.mark.parametrize("nom_modele", LISTE_ALGOS)
-def test_prediction_route_interrogation_modeles(nom_modele: str) -> None:
-    """Vérifie que chaque modèle répond correctement à une requête nominale."""
-    payload = {
-        "model_choice": nom_modele,
-        "ph": 7.2,
-        "Hardness": 200.0,
-        "Solids": 20000.0,
-        "Chloramines": 3.5,
-        "Sulfate": 300.0,
-        "Conductivity": 400.0,
-        "Organic_carbon": 14.2,
-        "Trihalomethanes": 66.3,
-        "Turbidity": 4.0
+    # 1. Préparation de la donnée dynamique
+    id_aleatoire = f"TEST_CORP_{uuid.uuid4().hex[:8].upper()}"
+    payload_client: Dict[str, Any] = {
+        "client_id": id_aleatoire,
+        "denomination": "Société d'Analyse des Eaux de Marseille",
+        "adresse": "45 Rue de la République, 13002 Marseille"
     }
-    reponse = client.post("/predict", json=payload)
-    # 200 si le serveur MLflow est up et le modèle entraîné, 503 s'il n'est pas encore poussé
-    assert reponse.status_code in [200, 503]
-
-
-@pytest.mark.parametrize("nom_modele", LISTE_ALGOS)
-def test_garde_fou_interception_ph_extreme(nom_modele: str) -> None:
-    """Vérifie que la couche métier bloque un pH toxique, peu importe l'algorithme."""
-    payload = {
-        "model_choice": nom_modele,
-        "ph": 1.5,  # Eau ultra acide
-        "Hardness": 200.0,
-        "Solids": 20000.0,
-        "Chloramines": 3.0,
-        "Sulfate": 300.0,
-        "Conductivity": 400.0,
-        "Organic_carbon": 10.0,
-        "Trihalomethanes": 50.0,
-        "Turbidity": 2.0
-    }
-    reponse = client.post("/predict", json=payload)
-    assert reponse.status_code == 200
     
-    donnees = reponse.json()
-    assert donnees["prediction"] == 0
-    assert donnees["status"] == "Non Potable"
-    assert "Garde-fou" in donnees["decision_reason"]
+    # 2. Enregistrement client avec mécanisme de "Retry" pour la stabilité en CI/CD
+    max_retries = 5
+    response_client = None
+    
+    for i in range(max_retries):
+        response_client = client.post("/api/clients/", json=payload_client)
+        if response_client.status_code == 201:
+            break
+        print(f"Tentative {i+1} échouée (Code {response_client.status_code}). Retentative...")
+        time.sleep(5) 
+    
+    # Validation finale de l'étape 1
+    assert response_client is not None
+    assert response_client.status_code == 201, f"Échec après {max_retries} tentatives. Erreur: {response_client.json()}"
+    
+    data_client = response_client.json()
+    assert data_client["status"] == "Succès"
+    assert data_client["client_id"] == id_aleatoire
+    
+    cle_api_generee: str = data_client["api_key"]
+    headers_authentifies: Dict[str, str] = {"X-API-Key": cle_api_generee}
+    
+    # =========================================================================
+    # ÉTAPE 2 : Téléversé de fiche laboratoire et Ingestion OCR (Mocké)
+    # =========================================================================
+    # Simulation du fichier binaire transmis par formulaire Multi-part form-data
+    fichier_simulation = (
+        "fiche_aquatest.pdf", 
+        b"%PDF-1.4 ... contenu binaire simule ...", 
+        "application/pdf"
+    )
+    payload_fichiers = {"file": fichier_simulation}
+
+    # Structure attendue en retour simulé de l'API externe OCR.space
+    reponse_mockee_ocr_space: Dict[str, Any] = {
+        "IsErroredOnProcessing": False,
+        "ParsedResults": [
+            {
+                "ParsedText": "RAPPORT LABORATOIRE AQUATEST\npH : 7.6\nDurete : 205.0\nSolides : 19500.0\nChloramines : 3.2\nSulfate : 310.0\nConductivite : 415.0\nCarbone : 11.5\nTrihalomethanes : 55.0\nTurbidite : 0.7\n"
+            }
+        ]
+    }
+
+    # Interception de l'appel requests.post vers OCR.space pour injecter notre réponse simulée
+    with mock.patch("src.routes.ocr.requests.post") as mock_post:
+        # Configuration du mock pour renvoyer un code HTTP 200 et notre dictionnaire JSON
+        mock_response = mock.MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = reponse_mockee_ocr_space
+        mock_post.return_value = mock_response
+
+        # Exécution de la requête sur notre endpoint unifié
+        response_ocr = client.post(
+            "/api/ocr/lab-report", 
+            files=payload_fichiers, 
+            headers=headers_authentifies
+        )
+
+    # Validations des résultats de la brique OCR
+    assert response_ocr.status_code == 201
+    data_ocr = response_ocr.json()
+    assert data_ocr["status"] == "Succès"
+    assert "prelevement_id" in data_ocr
+    
+    # Validation du bon fonctionnement du parser par expressions régulières (Regex)
+    mesures_extraites = data_ocr["extracted_data"]
+    assert mesures_extraites["ph"] == 7.6
+    assert mesures_extraites["Turbidity"] == 0.7
+    assert mesures_extraites["Chloramines"] == 3.2
+
+    # =========================================================================
+    # ÉTAPE 3 : Inférence du modèle d'Intelligence Artificielle (API Model)
+    # =========================================================================
+    # Payload d'inférence basé sur les métriques extraites de l'OCR
+    payload_prediction: Dict[str, Any] = {
+        "model_choice": "LogisticRegression",
+        "ph": mesures_extraites["ph"],
+        "Hardness": mesures_extraites["Hardness"],
+        "Solids": mesures_extraites["Solids"],
+        "Chloramines": mesures_extraites["Chloramines"],
+        "Sulfate": mesures_extraites["Sulfate"],
+        "Conductivity": mesures_extraites["Conductivity"],
+        "Organic_carbon": mesures_extraites["Organic_carbon"],
+        "Trihalomethanes": "%s" % mesures_extraites["Trihalomethanes"],
+        "Turbidity": mesures_extraites["Turbidity"],
+        "observations": "Validation finale du flux d'intégration"
+    }
+
+    # Pour s'assurer du passage du modèle ML en environnement de test sans charger 
+    # de lourds fichiers .pkl depuis le Model Registry, on mocke l'inférence
+    # de Scikit-Learn / XGBoost en forçant un retour potable (1)
+    with mock.patch("src.api.ml_models") as mock_models:
+        mock_instance_model = mock.MagicMock()
+        # Simulation de la méthode native .predict() de Scikit-Learn
+        mock_instance_model.predict.return_value = [1]
+        
+        # Injection du faux modèle dans notre dictionnaire global d'API
+        mock_models.get.return_value = mock_instance_model
+
+        response_pred = client.post(
+            "/api/predict/", 
+            json=payload_prediction, 
+            headers=headers_authentifies
+        )
+
+    # Validations finales du succès du pipeline complet
+    assert response_pred.status_code == 200
+    data_pred = response_pred.json()
+    assert data_pred["prediction"] == 1
+    assert data_pred["status"] == "Potable"
+    assert data_pred["model_used"] == "LogisticRegression"

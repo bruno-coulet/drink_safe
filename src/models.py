@@ -22,12 +22,12 @@ def get_models() -> dict[str, Any]:
     L'ajout d'un modèle ici l'intègre automatiquement au pipeline d'entraînement.
     """
     models = {
-        "logistic_regression": LogisticRegression(
+        "LogisticRegression": LogisticRegression(
             max_iter=1000,
             random_state=RANDOM_STATE
         ),
 
-        "random_forest": RandomForestClassifier(
+        "RandomForestClassifier": RandomForestClassifier(
             n_estimators=200,
             max_depth=10,
             min_samples_split=5,
@@ -35,7 +35,7 @@ def get_models() -> dict[str, Any]:
             n_jobs=-1
         ),
 
-        "xgboost": XGBClassifier(
+        "XGBClassifier": XGBClassifier(
             n_estimators=300,
             learning_rate=0.05,
             max_depth=6,
@@ -45,7 +45,7 @@ def get_models() -> dict[str, Any]:
             random_state=RANDOM_STATE
         ),
 
-        "mlp_classifier": MLPClassifier(
+        "MLPClassifier": MLPClassifier(
             hidden_layer_sizes=(100, 50),
             max_iter=500,
             activation="relu",

@@ -1,76 +1,90 @@
-## Le schéma d’architecture technique.
-##  Les choix techniques importants
-- frameworks
-- structure de l’API
-- gestion de la clé API
-- intégration OCR
+# Architecture Technique (Waterflow 2)
+
+## Les choix techniques importants
+- Frameworks & architecture : API Unique (FastAPI) unifiant Data, Inférence et OCR.
+- Structure modulaire via les routeurs (`APIRouter`).
+- Gestion de la clé API & Sécurité Réseau.
+- Stratégie MLOps de Lazy Loading & Volume Partagé.
+
+---
+
+## Schéma global de l'architecture
+
+```mermaid
+graph TD
+    subgraph Presentation [Couche Présentation - Hôte local]
+        UI[IHM Streamlit<br/>Port 8501]
+    end
+
+    subgraph API [Couche Logicielle & Inférence - Docker]
+        FastAPI[API Unique FastAPI<br/>api-unique : Port 8000]
+    end
+
+    subgraph MLOps [Couche Tracking & Données - Docker]
+        MLflow[MLflow Tracking Server<br/>mlflow-back : Port 5000]
+        Postgres[(PostgreSQL 16<br/>postgres-db : Port 5432)]
+        Vols[(Volume local partagé<br/>./mlruns_artifacts)]
+    end
+
+    %% Flux et connexions
+    UI -->|1. Requêtes API (Clé Auth)| FastAPI
+    FastAPI -->|2. Persiste clients, prélèvements et logs| Postgres
+    FastAPI -->|3. OCR & Business Rules| FastAPI
+    FastAPI -->|4. Interroge le Registre (Métadonnées)| MLflow
+    MLflow -->|5. Backend Store SQL| Postgres
+    MLflow -->|6. Artifact Store| Vols
+    FastAPI -.->|7. Lazy Loading des modèles (.pkl)| Vols
+```
 
 
-Flask n'est pas un serveur d'affichage (IHM). C'est un Middleware / API REST Pure.
-L'affichage (IHM) est géré à 100 % par Streamlit dans ton dossier front/.
-Flask va uniquement recevoir du JSON, manipuler la base de données, appeler l'OCR, et renvoyer du JSON.
+---
 
-### BDD - Comparatif : SQLite vs MariaDB vs PostgreSQL
+### Les choix techniques justifiés
 
-#### SQLite : Le SGBD "Fichier" (Embarqué)
-Principe : Il n'y a pas de serveur. Toute la base de données est stockée dans un seul fichier classique sur ton disque (comme le mlflow.db utilisé dans waterflow 1).
+#### 1. L'API Unique (Architecture Monolithique Modulaire)
 
-Avantages : 
-- Zéro configuration
-- ultra-léger
-- parfait pour le prototypage ou les applications locales légères.
+Contrairement au prototype Waterflow 1 (qui séparait Flask et FastAPI), Waterflow 2 consolide toute la logique backend dans un conteneur unique **FastAPI (Port 8000)**.
+**Justification :** - Réduction de la complexité réseau (pas d'appels inter-services inutiles).
 
-Inconvénients : 
-- Très mauvaise gestion des accès simultanés (si deux clients écrivent en même temps, le fichier se verrouille).
-- Pas de gestion avancée des droits d'utilisateurs.
+* Maintenance centralisée et documentation unifiée (Swagger auto-généré).
+* FastAPI offre des performances asynchrones natives, idéales pour l'attente de l'OCR et le chargement des modèles.
 
-#### MariaDB : Le SGBD "Serveur" Orienté Web (Équivalent Open Source de MySQL)
-Principe : C'est un serveur indépendant qui tourne en arrière-plan.
+#### 2. Structure de l'API & Modularité
 
-Avantages : Ultra-rapide pour les opérations de lecture (très populaire pour les sites web de type WordPress/e-commerce), simple à prendre en main.
+L'utilisation des **APIRouter** permet de segmenter le code sans créer de microservices lourds. L'application est divisée dans `src/routes/` :
 
-Inconvénients : Moins rigoureux sur le respect strict des contraintes SQL complexes et moins outillé pour les calculs analytiques ou la manipulation de données volumineuses/scientifiques.
+* `clients.py` : Création et gestion des clés API.
+* `measurements.py` : API Data (dépôt et consultation des prélèvements filtrés par client).
+* `predictions.py` : API Model (Inférence IA et garde-fous OMS).
+* `ocr.py` : API OCR (Ingestion des fiches labo).
 
-#### PostgreSQL : Le SGBD "Serveur" Industriel & Analytique
-Principe : Un serveur indépendant, connu pour être le SGBDR open source le plus puissant, le plus robuste et le plus respectueux des normes SQL standard.
+#### 3. Architecture MLOps et Lazy Loading
 
-Avantages : Gestion parfaite de la concurrence (des milliers de clients peuvent écrire en même temps), supporte des types de données complexes (JSON, géolocalisation), et intègre des fonctionnalités d'isolation indispensables pour la sécurité.
+Pour résoudre les problèmes de désynchronisation au démarrage (Cold Start) et de dépendance forte à MLflow :
 
-Inconvénients : Un peu plus lourd à configurer au départ, mais totalement transparent une fois encapsulé dans Docker.
+* **Séparation Registre / Stockage :** PostgreSQL stocke les métadonnées de MLflow, tandis qu'un volume Docker partagé (`./mlruns_artifacts`) stocke les fichiers binaires `.pkl`.
+* **Lazy Loading :** L'API FastAPI ne charge pas les modèles au démarrage. Elle interroge MLflow à la volée lors de la première requête, télécharge la dernière version depuis le volume partagé, puis la met en cache (RAM) pour les requêtes suivantes.
 
-#### Pourquoi choisir PostgreSQL :
+#### 4. Architecture Réseau & Parade DNS Rebinding
 
-- Conformité stricte au cahier des charges : Le sujet mentionne l'intégration d'une base de données PostgreSQL
+L'infrastructure de calcul et de stockage est entièrement conteneurisée via Docker Compose.
+Pour contrer la sécurité stricte d'Uvicorn au sein du réseau Docker isolé (erreur 403 HTTP *DNS rebinding* lors des appels internes vers MLflow), un patch intercepte et écrase l'en-tête `Host` à la volée dans l'API :
 
-- Architecture N-Tier et Concurrence : l'architecture va accueillir plusieurs profils d'utilisateurs :
-    - le Client final
-    - l'Analyste Qualité
-    - le Responsable d'Exploitation
+```python
+import requests
+_old_prepare_headers = requests.models.PreparedRequest.prepare_headers
+def patched_prepare_headers(self, headers):
+    _old_prepare_headers(self, headers)
+    self.headers["Host"] = "localhost:5000"
+requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
+```
 
-**SQLite** est exclu, car si un client injecte un rapport par OCR pendant qu'un analyste charge un dashboard, SQLite bloquerait l'application. **PostgreSQL** gère ces accès concurrents de manière isolée et ultra-sécurisée.
+---
 
-- Le standard de l'industrie en MLOps/Data Science : Dans le monde de l'intelligence artificielle et des données, **PostgreSQL** est le roi incontesté des bases relationnelles.
-nativement supporté par MLflow pour remplacer le stockage par fichier instable.
+## BDD - Comparatif & Choix de l'Infrastructure
 
-- Facilité d'intégration avec Docker : Lever un serveur PostgreSQL dans l'infrastructure ne prend que quelques lignes dans le fichier docker-compose.yml en utilisant l'**image officielle** `postgres:latest`.
+### Pourquoi PostgreSQL ? (Le SGBD Industriel & Analytique)
 
-- Solidité industrielle
-
-
-## Flask
-La route de ton Front est standardisée : Dans front/app.py, la route d'appel devient officiellement http://localhost:8080/api/v1/analyse (gérée grâce au préfixe du Blueprint).
-
-Aucun conflit : Flask tourne sur le port 8080, FastAPI sur le 8000, MLflow sur le 5000 et Streamlit sur le 8501.
-
-**Blueprint** ("plan de construction" ou "maquette")
-outil de Flask qui permet de découper les routes dans des fichiers séparés au lieu de devoir tout écrire dans un seul fichier géant.
-
-
-Sans de Blueprint, il faut utiliser le décorateur @app.route()   
-Mais pour faire ça, le fichier de routes a besoin de l'objet app   
-L'objet app est créé dans __init__.py   
-Au final, les fichiers s'importent les uns les autres en boucle.
-
-Le Blueprint règle ce problème en déclarant des routes de manière isolée dans src/middleware/routes.py en disant
-"Je prépare ces routes sur un plan de construction autonome   
-Plus tard, Flask prendra ce plan et l'intégrera à l'application principale
+1. **Gestion de la concurrence :** Indispensable puisque l'architecture accueille simultanément les requêtes du Front-end, l'ingestion OCR asynchrone et les logs du middleware HTTP.
+2. **Support MLflow Natif :** Remplace l'ancien stockage SQLite instable pour centraliser le *Backend Store* de MLflow de manière persistante.
+3. **Sécurité RGPD :** Permet la gestion relationnelle stricte entre les clés API (`clients`) et les historiques d'analyse (`prelevements`), garantissant qu'un client ne voit que ses propres données.

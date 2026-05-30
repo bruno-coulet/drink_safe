@@ -5,5 +5,15 @@
             "envManager": "ms-python.python:venv",
             "packageManager": "ms-python.python:pip"
         }
+    ],
+    "python.analysis.extraPaths": [
+        "./src"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./src"
+    ],
+    // FORCE LE MOTEUR DE TYPES À ANALYSER DEPUIS SRC
+    "python.analysis.importPaths": [
+        "./src"
     ]
 }
