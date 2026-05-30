@@ -1,0 +1,54 @@
+name: Waterflow 2 CI
+
+# 1. QUAND DÉCLENCHER LE ROBOT ?
+# À chaque 'push' ou 'pull request' sur n'importe quelle branche
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+# 2. QUE DOIT-IL FAIRE ?
+jobs:
+  tests-pytest:
+    # On lui demande un serveur vierge sous Ubuntu (comme ton WSL)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Étape A : Le robot télécharge ton code source
+      - name: 📥 Récupération du code
+        uses: actions/checkout@v4
+
+      # Étape B : Il installe le gestionnaire de paquets ultra-rapide 'uv'
+      - name: ⚡ Installation de uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      # Étape C : Il installe Python 3.12
+      - name: 🐍 Configuration de Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Étape D : Il installe tes dépendances (FastAPI, PyTest, etc.)
+      - name: 📦 Installation des dépendances
+        run: uv sync --frozen
+
+      # Étape E : Il recrée ton environnement avec de fausses variables pour les tests
+      - name: 🔐 Création de l'environnement de Test (.env)
+        run: |
+          echo "POSTGRES_PASSWORD=ActionTestPass!" >> .env
+          echo "OCR_SPACE_API_KEY=helloworld" >> .env
+          echo "SECRET_KEY=TestSecretKey" >> .env
+
+      # Étape F : Il allume PostgreSQL et MLflow en tâche de fond (Docker)
+      - name: 🐳 Lancement de l'infrastructure Docker (BDD & MLflow)
+        run: |
+          docker compose up -d postgres-db mlflow-back
+          echo "Attente de 15s pour l'initialisation de MLflow..."
+          sleep 15
+
+      # Étape G : L'épreuve finale, il lance tes tests !
+      - name: 🧪 Exécution des tests (PyTest)
+        run: uv run pytest -v
