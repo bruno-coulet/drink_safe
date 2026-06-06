@@ -21,7 +21,7 @@ load_dotenv(BASE_DIR / ".env")
 class Settings:
     """Configuration globale s'adaptant dynamiquement à l'environnement."""
 
-    PROJECT_NAME: str = "Waterflow Unified API"
+    PROJECT_NAME: str = "Waterflow"
     VERSION: str = "2.0.0"
 
     # Sécurité et Authentification (Clés API)
@@ -42,9 +42,14 @@ class Settings:
     )
 
     # --- Configuration Dynamique MLflow ---
-    MLFLOW_TRACKING_URI: str = (
-        "http://mlflow-back:5000" if IS_DOCKER else "http://127.0.0.1:5000"
-    )
+    # MLFLOW_TRACKING_URI: str = (
+    #     "http://mlflow-back:5000" if IS_DOCKER else "http://127.0.0.1:5000"
+    # )
+    MLFLOW_TRACKING_URI: str = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "http://mlflow-back:5000" if IS_DOCKER else "http://127.0.0.1:5000"
+)
+
 
 
 # Instanciation unique (Pattern Singleton)
