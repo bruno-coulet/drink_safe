@@ -100,6 +100,12 @@ def init_db() -> None:
             execute_le TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """,
+        # Ajout du compte de démonstration pour les recruteurs
+        """
+        INSERT INTO clients (client_id, denomination, adresse, api_key)
+        VALUES ('demo', 'Compte Démo', 'Portfolio Waterflow', 'wf_live_demo')
+        ON CONFLICT (client_id) DO NOTHING;
+        """
     ]
     with psycopg2.connect(settings.DATABASE_URL) as conn:
         with conn.cursor() as cursor:

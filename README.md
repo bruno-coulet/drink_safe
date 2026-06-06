@@ -79,9 +79,7 @@ Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds 
 * **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow-back`, `mlops-training` et `api-unique`.
 * **Lazy Loading Dynamique :** L'API charge les modèles en mémoire (RAM) à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant une résilience totale aux redémarrages.
 
-### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
-Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow-back:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
 
 ---
 
@@ -90,23 +88,53 @@ Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut
 **Pré-requis :** Créez un fichier `.env` à la racine du projet :
 
 ```env
+POSTGRES_USER=admin_waterflow
+POSTGRES_DB=waterflow_db
 POSTGRES_PASSWORD=mot_de_passe
 OCR_SPACE_API_KEY=Cle_Api_Ocr_Space
 SECRET_KEY=Une_Cle_De_Session_Securisee
 ```
+### Scénario A : Entraînement Local et Remote Tracking (Mode Production Recommandé)
+Dans cette architecture distribuée, l'entraînement ne se fait pas sur le VPS pour préserver ses ressources CPU/RAM. Les calculs sont réalisés en local (via WSL), et les modèles sont expédiés en toute sécurité vers le serveur distant (VPS) via HTTPS.
 
-### Scénario : Entraînement Initial (MLOps Pipeline)
+Sur le VPS, lancez l'infrastructure de base :
 
-Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
+1 Lancer l'infrastructure de base et l'API :
+```Bash
+docker compose up -d
+```
+2 Sur votre poste de développement (Local WSL), assurez-vous d'avoir les données dans `data/processed/`, puis lancez le pipeline en forçant l'URI cible du VPS :
 
-1. Assurez-vous que l'infrastructure de base tourne (`postgres-db` et `mlflow-back`).
-2. Lancez le conteneur d'entraînement éphémère :
+```Bash
+MLFLOW_TRACKING_URI=https://mlflow.waterflow.lab.zanza-creation.com uv run python -m src.experiment
+```
 
-```bash
+### Scénario B : Entraînement 100% Local (Mode Pipeline Isolé)
+Si vous ne possédez pas de VPS et souhaitez faire tourner l'intégralité du projet sur votre propre machine :
+
+1 Démarrez la base de données et MLflow :
+
+```Bash
+docker compose up -d postgres-db mlflow-back
+```
+2 Lancez le conteneur d'entraînement éphémère (qui simulera le pipeline MLOps en local) :
+
+```Bash
 docker compose up mlops-training
+```
+3 Une fois l'entraînement terminé (exited with code 0), lancez l'API et le Front :
+
+```Bash
+docker compose up -d api-unique front
 ```
 
 *Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.* Il entraîne les 4 architectures, publie les métriques et écrit les artefacts binaires dans le volume partagé avant de s'arrêter proprement (`exited with code 0`).
+
+Accès aux interfaces de Production :
+
+Registre MLflow : https://mlflow.waterflow.lab.zanza-creation.com
+API Unifiée (Swagger) : https://api.waterflow.lab.zanza-creation.com/docs
+Portail Expert (Streamlit) : https://waterflow.lab.zanza-creation.com
 
 ### Couche "Garde-fou Métier" (Business Rules)
 
@@ -122,28 +150,35 @@ Une couche de règles métiers strictes est exécutée en amont de l'inférence.
 
 Pour piloter le projet, il est important de choisir le mode de lancement adapté :
 
-1. Mode Production (Déploiement complet)
-Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec ses conteneurs isolés.
+### 1. Mode Production (Déploiement complet)
+Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec ses conteneurs isolés (via Traefik).
 
-```shell
+```bash
 docker compose up -d
 ```
-
 Cela lance tous les services (BDD, MLflow, API et Front) de manière isolée et persistante.
+L'accès à l'API se fait alors sur : https://api.waterflow.lab.zanza-creation.com/docs
 
-Accès API sur https://api.waterflow.lab.zanza-creation.com/docs.
+### 2. Mode Développement (Hot Reload en local)
+Utile si l'on modifie le code source (src/ ou front/) pour voir les changements s'appliquer en temps réel sur la machine locale, sans avoir à reconstruire les images Docker.
 
-2. Mode Développement (Édition de code)
-Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
+**Étape A : Démarrer l'infrastructure de base**
+Lancez uniquement les bases de données (sans l'API ni le Front via Docker) :
 
-Pré-requis :
-- Demarer les services de données lancés avec Docker
-    - `docker compose up -d postgres-db mlflow-back`
-- Arrêter le conteneur API
-    - `docker compose stop api-unique`
+```Bash
+docker compose up -d postgres-db mlflow-back
+```
+(Note : Si le conteneur de l'API était déjà en cours d'exécution, arrêtez-le préalablement avec docker compose stop api-unique)
 
-```shell
+**Étape B : Démarrer l'API en local**
+Lancez l'API unifiée nativement via uvicorn. Le mode --reload redémarrera l'API instantanément à chaque sauvegarde de fichier :
+
+```Bash
 uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
 ```
+Étape C : Démarrer l'interface experte (Optionnel)
+Dans un nouveau terminal, lancez le frontend Streamlit :
 
-Le mode --reload redémarre l'API instantanément à chaque sauvegarde de fichier.
+```Bash
+uv run streamlit run front/app.py
+```

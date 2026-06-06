@@ -71,6 +71,26 @@ user_api_key = st.sidebar.text_input(
     help="Saisissez la clé wf_live_... fournie par l'administrateur pour débloquer les services.",
 )
 
+# Encart Démo pour faciliter les tests
+st.sidebar.info(
+    "**Mode Démo**\n\n"
+    "Pour faciliter votre test de l'application, une clé API de démonstration "
+    "a été pré-configurée :\n\n"
+    "`wf_live_demo`"
+)
+
+# Champ de saisie (pré-rempli avec la valeur de la clé démo)
+user_api_key = st.sidebar.text_input(
+    "Clé API Client (X-API-Key)",
+     # Pré-remplissage
+    value="wf_live_demo",
+    type="password",
+    help="Saisissez la clé wf_live_... fournie par l'administrateur pour débloquer les services.",
+)
+
+
+
+
 st.title("💧 Évaluation de la Potabilité de l'Eau")
 st.write("Portail d'analyse industrielle centralisé (Version 2.0 - API Unique).")
 st.markdown("---")
