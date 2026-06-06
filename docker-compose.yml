@@ -152,6 +152,12 @@ services:
     # On supprime la partie "mlflow db upgrade" pour tester le démarrage simple
     command: sh -c "python -m pip install --upgrade pip && pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
   api-unique:
     build:
@@ -166,7 +172,7 @@ services:
       postgres-db:
         condition: service_healthy
       mlflow-back:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./data:/app/data
       - ./mlruns_artifacts:/app/artifacts
@@ -190,6 +196,9 @@ services:
       - "traefik.http.routers.waterflow-app.tls.certresolver=myresolver"
       - "traefik.http.routers.waterflow-app.service=waterflow-app-svc"
       - "traefik.http.services.waterflow-app-svc.loadbalancer.server.port=8000"
+      # Fais patienter traefik plus longtemps en cas de timeout (504) pour les requêtes longues vers l'API ou le Front
+      - "traefik.http.services.api-unique.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.timeout.errorservice.status=504"
     restart: unless-stopped
 
   # 4. PIPELINE D'ENTRAÎNEMENT ISOLE
