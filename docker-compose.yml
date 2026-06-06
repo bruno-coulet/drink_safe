@@ -1,93 +1,164 @@
+# services:
+#   # 1. BASE DE DONNÉES POSTGRESQL
+#   postgres-db:
+#     image: postgres:16-alpine
+#     container_name: postgres-db
+#     ports:
+#       - "5432:5432"
+#     environment:
+#       - POSTGRES_USER=admin_waterflow
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - POSTGRES_DB=waterflow_db
+#     volumes:
+#       - postgres_waterflow_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U admin_waterflow -d waterflow_db"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 5
+#     restart: unless-stopped
+
+#   # 2. SERVEUR DE TRACKING MLOPS MLFLOW
+#   mlflow-back:
+#     image: python:3.12-slim
+#     container_name: mlflow-back
+#     ports:
+#       - "5000:5000"
+#     environment:
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       # On injecte les variables directement ici pour qu'Uvicorn les lise nativement au démarrage
+#       - UVICORN_PROXY_HEADERS=true
+#       - UVICORN_FORWARDED_ALLOW_IPS=*
+#     depends_on:
+#       postgres-db:
+#         condition: service_healthy
+#     volumes:
+#       - ./mlruns_artifacts:/app/artifacts
+#     restart: unless-stopped
+#     command: sh -c "pip install --no-cache-dir mlflow psycopg2-binary && mlflow server --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
+
+#   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
+#   api-unique:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: api-unique
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
+#       # En visant l'adresse IP 127.0.0.1 ou localhost mapée sur le port de la machine hôte, on contourne le DNS Rebinding
+#       # - MLFLOW_TRACKING_URI=http://172.18.0.1:5000
+#       - MLFLOW_TRACKING_URI=http://mlflow-back:5000
+#       - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
+#     depends_on:
+#       postgres-db:
+#         condition: service_healthy
+#       mlflow-back:
+#         condition: service_started
+#     volumes:
+#       - ./data:/app/data
+#       - ./mlruns_artifacts:/app/artifacts
+#       # Force l'injection de ton code actuel sans passer par le cache de l'image
+#       - ./src:/app/src
+#     restart: unless-stopped
+
+#   # 4. PIPELINE D'ENTRAÎNEMENT ISOLE
+#   mlops-training:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: mlops-training
+#     environment:
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
+#       - MLFLOW_TRACKING_URI=http://mlflow-back:5000
+#     depends_on:
+#       postgres-db:
+#         condition: service_healthy
+#       mlflow-back:
+#         condition: service_started
+#     volumes:
+#       - ./data:/app/data
+#       - ./mlruns_artifacts:/app/artifacts
+#     # command: ["python", "-m", "src.experiment"]
+#     command: sh -c "echo 'Attente initialisation de MLflow...' && sleep 15 && python -m src.experiment"
+
+
+# volumes:
+#   postgres_waterflow_data:
+#     driver: local
+
+
 services:
-  # 1. BASE DE DONNÉES POSTGRESQL
+  # 1. Base de données (Reste 100% isolée)
   postgres-db:
     image: postgres:16-alpine
-    container_name: postgres-db
-    ports:
-      - "5432:5432"
     environment:
-      - POSTGRES_USER=admin_waterflow
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=waterflow_db
-    volumes:
-      - postgres_waterflow_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin_waterflow -d waterflow_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - waterflow_internal
 
-  # 2. SERVEUR DE TRACKING MLOPS MLFLOW
+  # 2. MLflow : Accessible via sous-domaine
   mlflow-back:
-    image: python:3.12-slim
-    container_name: mlflow-back
-    ports:
-      - "5000:5000"
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      # On injecte les variables directement ici pour qu'Uvicorn les lise nativement au démarrage
-      - UVICORN_PROXY_HEADERS=true
-      - UVICORN_FORWARDED_ALLOW_IPS=*
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-    volumes:
-      - ./mlruns_artifacts:/app/artifacts
-    restart: unless-stopped
-    command: sh -c "pip install --no-cache-dir mlflow psycopg2-binary && mlflow server --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
-
-  # 3. API UNIQUE FASTAPI (Data + Model + OCR)
-  api-unique:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: api-unique
-    ports:
-      - "8000:8000"
+      context: ./mlflow
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
-      # En visant l'adresse IP 127.0.0.1 ou localhost mapée sur le port de la machine hôte, on contourne le DNS Rebinding
-      # - MLFLOW_TRACKING_URI=http://172.18.0.1:5000 
-      - MLFLOW_TRACKING_URI=http://mlflow-back:5000
-      - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}
+      - MLFLOW_HOST=mlflow.waterflow.lab.zanza-creation.com
+    networks:
+      - waterflow_internal
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.waterflow-mlflow.rule=Host(`mlflow.waterflow.lab.zanza-creation.com`)"
+      - "traefik.http.routers.waterflow-mlflow.entrypoints=websecure"
+      - "traefik.http.routers.waterflow-mlflow.tls=true"
+      - "traefik.http.routers.waterflow-mlflow.tls.certresolver=myresolver" # Vérifie que 'myresolver' est bien le nom sur ton VPS
+      - "traefik.http.services.waterflow-mlflow.loadbalancer.server.port=5000"
     depends_on:
-      postgres-db:
-        condition: service_healthy
-      mlflow-back:
-        condition: service_started
-    volumes:
-      - ./data:/app/data
-      - ./mlruns_artifacts:/app/artifacts
-      # 🚀 LIGNE MAGIQUE À AJOUTER : Force l'injection de ton code actuel sans passer par le cache de l'image
-      - ./src:/app/src
-    restart: unless-stopped
+      - postgres-db
 
-  # 4. PIPELINE D'ENTRAÎNEMENT ISOLE
+  # 3. API et Front
+  api-unique:
+    build: .
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-back:5000
+    networks:
+      - waterflow_internal
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      # Routeur API
+      - "traefik.http.routers.waterflow-api.rule=Host(`api.waterflow.lab.zanza-creation.com`)"
+      - "traefik.http.routers.waterflow-api.entrypoints=websecure"
+      - "traefik.http.routers.waterflow-api.tls=true"
+      - "traefik.http.routers.waterflow-api.tls.certresolver=myresolver"
+      - "traefik.http.routers.waterflow-api.service=waterflow-api-svc"
+      - "traefik.http.services.waterflow-api-svc.loadbalancer.server.port=8000"
+
+      # Routeur App (Front) - Si le front est servi par la même API FastAPI
+      - "traefik.http.routers.waterflow-app.rule=Host(`waterflow.lab.zanza-creation.com`)"
+      - "traefik.http.routers.waterflow-app.entrypoints=websecure"
+      - "traefik.http.routers.waterflow-app.tls=true"
+      - "traefik.http.routers.waterflow-app.tls.certresolver=myresolver"
+      - "traefik.http.routers.waterflow-app.service=waterflow-app-svc"
+      - "traefik.http.services.waterflow-app-svc.loadbalancer.server.port=8000"
+    depends_on:
+      - mlflow-back
+
+  # 4. Pipeline d'entraînement
   mlops-training:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mlops-training
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
-      - MLFLOW_TRACKING_URI=http://mlflow-back:5000
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      mlflow-back:
-        condition: service_started
-    volumes:
-      - ./data:/app/data
-      - ./mlruns_artifacts:/app/artifacts
-    # command: ["python", "-m", "src.experiment"]
-    command: sh -c "echo 'Attente initialisation de MLflow...' && sleep 15 && python -m src.experiment"
+      context: ./mlops
+    networks:
+      - waterflow_internal
 
-
-
-
-volumes:
-  postgres_waterflow_data:
-    driver: local
+networks:
+  waterflow_internal:
+    driver: bridge
+  traefik:
+    external: true
