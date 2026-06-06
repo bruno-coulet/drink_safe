@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "psycopg2-binary>=2.9.12",
     "setuptools<70.0.0",
+    "ruff>=0.15.15",
 ]
 
 [build-system]
@@ -46,3 +47,13 @@ test = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+
+[tool.ruff]
+# Appliquer les règles : E (Error), F (Pyflakes), I (isort/Imports)
+select = ["E", "F", "I"]
+line-length = 88
+
+[tool.ruff.lint]
+# Optionnel : si tu veux que Ruff corrige automatiquement certains problèmes
+fixable = ["ALL"]

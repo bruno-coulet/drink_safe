@@ -1,19 +1,41 @@
 {
-    "python-envs.pythonProjects": [
-        {
-            "path": ".",
-            "envManager": "ms-python.python:venv",
-            "packageManager": "ms-python.python:pip"
+    "security.allowedUNCHosts": ["wsl.localhost"],
+    "files.autoSave": "afterDelay",
+    "accessibility.signals.lineHasInlineSuggestion": { "sound": "off" },
+    "editor.accessibilitySupport": "off",
+    "terminal.integrated.initialHint": false,
+    "workbench.colorCustomizations": {},
+
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "python.analysis.extraPaths": ["./src"],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
+
+    "editor.inlineSuggest.enabled": true,
+    "editor.suggestSelection": "first",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+    },
+
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
         }
-    ],
-    "python.analysis.extraPaths": [
-        "./src"
-    ],
-    "python.autoComplete.extraPaths": [
-        "./src"
-    ],
-    // FORCE LE MOTEUR DE TYPES À ANALYSER DEPUIS SRC
-    "python.analysis.importPaths": [
-        "./src"
-    ]
+    },
+
+    "ruff.enable": true,
+
+    "jupyter.askForKernelRestart": false,
+    "jupyter.interactiveWindow.textEditor.executeSelection": true,
+
+    "csv-preview.separator": ",",
+
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true
 }
