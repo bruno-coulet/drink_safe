@@ -113,7 +113,8 @@ services:
 
   # 2. SERVEUR DE TRACKING MLOPS MLFLOW
   mlflow-back:
-    image: python:3.12-slim
+    # image: python:3.12-slim
+    image: python:3.9-slim
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - UVICORN_PROXY_HEADERS=true
@@ -144,11 +145,10 @@ services:
       # ----------------------------------
       - "traefik.http.services.waterflow-mlflow.loadbalancer.server.port=5000"
     restart: unless-stopped
-    # dire au conteneur d'utiliser la version 2.10.2 de MLflow
+    # dit au conteneur d'utiliser la version 2.10.2 de MLflow
     # C'est la version stable basée sur Flask, qui fonctionne nativement avec Traefik
     # sans avoir besoin de label MIDDLEWARE.
-    command: sh -c "pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
-
+    command: sh -c "python -m pip install --upgrade pip && pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
   api-unique:
     build:
