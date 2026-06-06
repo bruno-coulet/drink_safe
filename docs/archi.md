@@ -12,8 +12,8 @@
 
 ```mermaid
 graph TD
-    subgraph Presentation [Couche Présentation - Hôte local]
-        UI[IHM Streamlit<br/>Port 8501]
+    subgraph Presentation [Couche Présentation - Docker]
+        UI[IHM Streamlit<br/>front : Port 8501]
     end
 
     subgraph API [Couche Logicielle & Inférence - Docker]

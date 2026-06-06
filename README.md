@@ -2,11 +2,11 @@
 ## Centralisation API Unique, Ingestion OCR & MLOps
 
 ## Contexte du projet
-Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).   
+Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
-- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser l'analyse, le suivi, l'ingestion OCR et la prédiction. 
-    
+- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser l'analyse, le suivi, l'ingestion OCR et la prédiction.
+
 Réalisé sous l'environnement WSL2, le système intègre :
 - une interface utilisateur réactive (Streamlit).
 - une **API Unique unifiée (FastAPI)** gérant l'ingestion des données (Data), l'extraction documentaire (OCR) et les prédictions (Model) protégées par des garde-fous sanitaires.
@@ -29,23 +29,14 @@ Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'es
 Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
 ### 1. Démarrer l'infrastructure et l'API
-Assurez-vous que **Docker Desktop** (avec intégration WSL2) est actif, puis déployez l'environnement (Base de données, serveur MLflow et API Unique) :
+Assurez-vous que **Docker Desktop** (avec intégration WSL2) est actif, puis déployez l'environnement complet (Base de données, serveur MLflow, API Unique et Front Streamlit) :
 ```bash
-docker compose up -d postgres-db mlflow-back api-unique
+docker compose up -d
 ```
 
-L'interface graphique de suivi MLflow devient accessible sur : http://127.0.0.1:5000
-L'API Unique et sa documentation Swagger sont disponibles sur : http://127.0.0.1:8000/docs
-
-### 2. Interface Frontend (Streamlit)
-
-Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hôte local :
-
-```bash
-uv run streamlit run front/app.py
-```
-
-Interface utilisateur disponible sur : http://localhost:8501
+L'interface graphique de suivi MLflow devient accessible sur : https://mlflow.waterflow.lab.zanza-creation.com
+L'API Unique et sa documentation Swagger sont disponibles sur : https://api.waterflow.lab.zanza-creation.com/docs
+L'interface experte Streamlit est disponible sur : https://waterflow.lab.zanza-creation.com
 
 ---
 
@@ -71,7 +62,7 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
 | --- | --- | --- | --- | --- |
-| **Interface UI** | Streamlit | 8501 | Hôte local (WSL2) | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
+| **Interface UI** | Streamlit (`front`) | 8501 | Conteneur Docker | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
 | **API Unique** | FastAPI (`api-unique`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
 | **Registre MLOps** | MLflow (`mlflow-back`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
 | **Base de Données** | PostgreSQL 16 (`postgres-db`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
@@ -138,14 +129,14 @@ Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec s
 docker compose up -d
 ```
 
-Cela lance tous les services (BDD, MLflow, API) de manière isolée et persistante.
+Cela lance tous les services (BDD, MLflow, API et Front) de manière isolée et persistante.
 
-Accès API sur http://127.0.0.1:8000.
+Accès API sur https://api.waterflow.lab.zanza-creation.com/docs.
 
 2. Mode Développement (Édition de code)
 Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
 
-Pré-requis : 
+Pré-requis :
 - Demarer les services de données lancés avec Docker
     - `docker compose up -d postgres-db mlflow-back`
 - Arrêter le conteneur API

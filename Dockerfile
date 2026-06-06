@@ -32,6 +32,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copie de l'intégralité du code source unifié
 COPY src/ /app/src/
+COPY front/ /app/front/
 
 # Exposition du port natif de notre API unique FastAPI
 EXPOSE 8000

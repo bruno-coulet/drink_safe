@@ -113,8 +113,9 @@ services:
 
   # 2. SERVEUR DE TRACKING MLOPS MLFLOW
   mlflow-back:
-    # image: python:3.12-slim
-    image: python:3.9-slim
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - UVICORN_PROXY_HEADERS=true
@@ -134,32 +135,16 @@ services:
       - "traefik.http.routers.waterflow-mlflow.entrypoints=websecure"
       - "traefik.http.routers.waterflow-mlflow.tls=true"
       - "traefik.http.routers.waterflow-mlflow.tls.certresolver=myresolver"
-      # --- MIDDLEWARE Modification de l'en-tête et de l'origine (FIX DNS + CORS) ---
-      # "ment" au conteneur MLflow et lui dit "la requête vient de l'intérieur (0.0.0.0)"
-      # C'est un "hack" standard et propre pour contourner la paranoïa (DNS Rebinding)
-      # de certaines applications comme MLflow, sans casser l'architecture de sous-domaines.
-      # - "traefik.http.routers.waterflow-mlflow.middlewares=mlflow-headers"
-      # - "traefik.http.middlewares.mlflow-headers.headers.customrequestheaders.Host=0.0.0.0"
-      # - "traefik.http.middlewares.mlflow-headers.headers.customrequestheaders.Origin=https://0.0.0.0"
-      # ---------------------------------------------------
-      # ----------------------------------
       - "traefik.http.services.waterflow-mlflow.loadbalancer.server.port=5000"
     restart: unless-stopped
-    # dit au conteneur d'utiliser la version 2.10.2 de MLflow
-    # C'est la version stable basée sur Flask, qui fonctionne nativement avec Traefik
-    # sans avoir besoin de label MIDDLEWARE.
-    # command: sh -c "python -m pip install --upgrade pip && pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
-    # On supprime la partie "mlflow db upgrade" pour tester le démarrage simple
-    command: sh -c "python -m pip install --upgrade pip && pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
+    command: sh -c "exec mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
 
     healthcheck:
-      # On attend 20 secondes avant de commencer à tester, pour laisser le pip install finir
-      start_period: 20s
-      # On teste toutes les 10 secondes
+      start_period: 60s
       interval: 10s
       timeout: 5s
-      retries: 5
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/ || exit 1"]
+      retries: 12
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/').read()\""]
 
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
   api-unique:
@@ -175,7 +160,7 @@ services:
       postgres-db:
         condition: service_healthy
       mlflow-back:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./data:/app/data
       - ./mlruns_artifacts:/app/artifacts
@@ -185,26 +170,47 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      # Routeur API
       - "traefik.http.routers.waterflow-api.rule=Host(`api.waterflow.lab.zanza-creation.com`)"
       - "traefik.http.routers.waterflow-api.entrypoints=websecure"
       - "traefik.http.routers.waterflow-api.tls=true"
       - "traefik.http.routers.waterflow-api.tls.certresolver=myresolver"
       - "traefik.http.routers.waterflow-api.service=waterflow-api-svc"
       - "traefik.http.services.waterflow-api-svc.loadbalancer.server.port=8000"
-      # Routeur App (Front)
-      - "traefik.http.routers.waterflow-app.rule=Host(`waterflow.lab.zanza-creation.com`)"
-      - "traefik.http.routers.waterflow-app.entrypoints=websecure"
-      - "traefik.http.routers.waterflow-app.tls=true"
-      - "traefik.http.routers.waterflow-app.tls.certresolver=myresolver"
-      - "traefik.http.routers.waterflow-app.service=waterflow-app-svc"
-      - "traefik.http.services.waterflow-app-svc.loadbalancer.server.port=8000"
-      # Fais patienter traefik plus longtemps en cas de timeout (504) pour les requêtes longues vers l'API ou le Front
-      - "traefik.http.services.api-unique.loadbalancer.server.port=8000"
-      - "traefik.http.middlewares.timeout.errorservice.status=504"
     restart: unless-stopped
+    healthcheck:
+      start_period: 20s
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()\""]
 
-  # 4. PIPELINE D'ENTRAÎNEMENT ISOLE
+  # 4. INTERFACE STREAMLIT POUR LES EXPERTS
+  front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - API_URL=http://api-unique:8000/api
+    depends_on:
+      api-unique:
+        condition: service_healthy
+    volumes:
+      - ./front:/app/front
+    networks:
+      - waterflow_internal
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.waterflow-front.rule=Host(`waterflow.lab.zanza-creation.com`)"
+      - "traefik.http.routers.waterflow-front.entrypoints=websecure"
+      - "traefik.http.routers.waterflow-front.tls=true"
+      - "traefik.http.routers.waterflow-front.tls.certresolver=myresolver"
+      - "traefik.http.routers.waterflow-front.service=waterflow-front-svc"
+      - "traefik.http.services.waterflow-front-svc.loadbalancer.server.port=8501"
+    restart: unless-stopped
+    command: ["streamlit", "run", "front/app.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.headless", "true"]
+
+  # 5. PIPELINE D'ENTRAÎNEMENT ISOLE
   mlops-training:
     build:
       context: .
@@ -217,13 +223,13 @@ services:
       postgres-db:
         condition: service_healthy
       mlflow-back:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./data:/app/data
       - ./mlruns_artifacts:/app/artifacts
     networks:
       - waterflow_internal
-    command: sh -c "echo 'Attente initialisation de MLflow...' && sleep 15 && python -m src.experiment"
+    command: sh -c "echo 'Attente initialisation de MLflow...' && sleep 15 && exec python -m src.experiment"
 
 networks:
   waterflow_internal:
