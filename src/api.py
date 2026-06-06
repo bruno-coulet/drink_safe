@@ -26,17 +26,17 @@ from src.routes.predictions import router as predictions_router
 from src.routes.ocr import router as ocr_router
 
 # --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
-import requests
-_old_prepare_headers = requests.models.PreparedRequest.prepare_headers
+# import requests
+# _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
 
-def patched_prepare_headers(self, headers):
-    _old_prepare_headers(self, headers)
-    # On écrase l'en-tête Host UNIQUEMENT si la cible est le conteneur MLflow
-    if self.url and "mlflow-back" in self.url:
-        self.headers["Host"] = "localhost:5000"
+# def patched_prepare_headers(self, headers):
+#     _old_prepare_headers(self, headers)
+#     # On écrase l'en-tête Host UNIQUEMENT si la cible est le conteneur MLflow
+#     if self.url and "mlflow-back" in self.url:
+#         self.headers["Host"] = "localhost:5000"
 
-requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
-# -----------------------------------------------------------
+# requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
+# # -----------------------------------------------------------
 
 
 # Configuration globale de la connexion à MLflow
@@ -57,50 +57,50 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         print(f"⚠️ Alerte : Échec de l'initialisation de la BDD au démarrage : {e}")
 
-    # print("[API Unique] Étape 2 : Scan et chargement des modèles depuis MLflow Model Registry...")
-    # try:
-    #     client = MlflowClient()
-    #     registered_models = client.search_registered_models()
+    print("[API Unique] Étape 2 : Scan et chargement des modèles depuis MLflow Model Registry...")
+    try:
+        client = MlflowClient()
+        registered_models = client.search_registered_models()
 
-    #     for rm in registered_models:
-    #         model_name: str = rm.name
-    #         if model_name.startswith("WaterModel_"):
-    #             algo_key: str = model_name.replace("WaterModel_", "")
+        for rm in registered_models:
+            model_name: str = rm.name
+            if model_name.startswith("WaterModel_"):
+                algo_key: str = model_name.replace("WaterModel_", "")
 
-    #             # 1. Récupération de la dernière version du modèle enregistrée
-    #             latest_versions = rm.latest_versions
-    #             if not latest_versions:
-    #                 print(f"⚠️ Aucune version trouvée pour {model_name}")
-    #                 continue
+                # 1. Récupération de la dernière version du modèle enregistrée
+                latest_versions = rm.latest_versions
+                if not latest_versions:
+                    print(f"⚠️ Aucune version trouvée pour {model_name}")
+                    continue
 
-    #             latest_v = latest_versions[0]
-    #             run_id = latest_v.run_id
+                latest_v = latest_versions[0]
+                run_id = latest_v.run_id
 
-    #             # 2. Stratégie de chargement hybride (Sécurité Production)
-    #             loaded = False
+                # 2. Stratégie de chargement hybride (Sécurité Production)
+                loaded = False
 
-    #             # Tentative A : Via l'URI classique nettoyé
-    #             try:
-    #                 model_uri = f"models:/{model_name}/1"
-    #                 ml_models[algo_key] = mlflow.sklearn.load_model(model_uri.rstrip("/."))
-    #                 print(f"✓ {model_name} chargé avec succès via l'URI du Registre.")
-    #                 loaded = True
-    #             except Exception:
-    #                 pass
+                # Tentative A : Via l'URI classique nettoyé
+                try:
+                    model_uri = f"models:/{model_name}/1"
+                    ml_models[algo_key] = mlflow.sklearn.load_model(model_uri.rstrip("/."))
+                    print(f"✓ {model_name} chargé avec succès via l'URI du Registre.")
+                    loaded = True
+                except Exception:
+                    pass
 
-    #             # Tentative B (Fallback Industriel) : Si le dossier /1/ est introuvable,
-    #             # on bascule sur l'URI directe du Run ID (qui pointe sur les dossiers m-XXXX)
-    #             if not loaded:
-    #                 try:
-    #                     fallback_uri = f"runs:/{run_id}/model"
-    #                     ml_models[algo_key] = mlflow.sklearn.load_model(fallback_uri)
-    #                     print(f"✓ {model_name} chargé avec succès via Fallback (Run ID: {run_id}).")
-    #                     loaded = True
-    #                 except Exception as e_fallback:
-    #                     print(f"⚠️ Impossible de charger le modèle {model_name} : {e_fallback}")
+                # Tentative B (Fallback Industriel) : Si le dossier /1/ est introuvable,
+                # on bascule sur l'URI directe du Run ID (qui pointe sur les dossiers m-XXXX)
+                if not loaded:
+                    try:
+                        fallback_uri = f"runs:/{run_id}/model"
+                        ml_models[algo_key] = mlflow.sklearn.load_model(fallback_uri)
+                        print(f"✓ {model_name} chargé avec succès via Fallback (Run ID: {run_id}).")
+                        loaded = True
+                    except Exception as e_fallback:
+                        print(f"⚠️ Impossible de charger le modèle {model_name} : {e_fallback}")
 
-    # except Exception as e:
-    #     print(f"⚠️ Mode dégradé enclenché : Échec de connexion à MLflow UI : {e}")
+    except Exception as e:
+        print(f"⚠️ Mode dégradé enclenché : Échec de connexion à MLflow UI : {e}")
 
     yield
 
