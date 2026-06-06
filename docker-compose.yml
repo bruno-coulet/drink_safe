@@ -147,7 +147,7 @@ services:
     # dire au conteneur d'utiliser la version 2.10.2 de MLflow
     # C'est la version stable basée sur Flask, qui fonctionne nativement avec Traefik
     # sans avoir besoin de label MIDDLEWARE.
-    command: sh -c "pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary && mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
+    command: sh -c "pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow db upgrade postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
 
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
   api-unique:
