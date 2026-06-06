@@ -90,9 +90,9 @@ Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut
 **Pré-requis :** Créez un fichier `.env` à la racine du projet :
 
 ```env
-POSTGRES_PASSWORD=MonMotDePasseSecurise123!
-OCR_SPACE_API_KEY=VotreCleApiOcrSpace
-SECRET_KEY=UneCleDeSessionSecurisee
+POSTGRES_PASSWORD=mot_de_passe
+OCR_SPACE_API_KEY=Cle_Api_Ocr_Space
+SECRET_KEY=Une_Cle_De_Session_Securisee
 ```
 
 ### Scénario : Entraînement Initial (MLOps Pipeline)
