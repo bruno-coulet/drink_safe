@@ -153,10 +153,13 @@ services:
     command: sh -c "python -m pip install --upgrade pip && pip install --no-cache-dir 'mlflow==2.10.2' psycopg2-binary setuptools && mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 5s
-      timeout: 3s
+      # On attend 20 secondes avant de commencer à tester, pour laisser le pip install finir
+      start_period: 20s
+      # On teste toutes les 10 secondes
+      interval: 10s
+      timeout: 5s
       retries: 5
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/ || exit 1"]
 
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
   api-unique:
@@ -172,7 +175,7 @@ services:
       postgres-db:
         condition: service_healthy
       mlflow-back:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - ./data:/app/data
       - ./mlruns_artifacts:/app/artifacts
