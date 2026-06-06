@@ -133,9 +133,14 @@ services:
       - "traefik.http.routers.waterflow-mlflow.entrypoints=websecure"
       - "traefik.http.routers.waterflow-mlflow.tls=true"
       - "traefik.http.routers.waterflow-mlflow.tls.certresolver=myresolver"
-      # --- MIDDLEWARE ---
-      - "traefik.http.routers.waterflow-mlflow.middlewares=mlflow-host-rewrite"
-      - "traefik.http.middlewares.mlflow-host-rewrite.headers.customrequestheaders.Host=0.0.0.0"
+      # --- MIDDLEWARE Modification de l'en-tête et de l'origine (FIX DNS + CORS) ---
+      # "ment" au conteneur MLflow et lui dit "la requête vient de l'intérieur (0.0.0.0)"
+      # C'est un "hack" standard et propre pour contourner la paranoïa (DNS Rebinding)
+      # de certaines applications comme MLflow, sans casser l'architecture de sous-domaines.
+      - "traefik.http.routers.waterflow-mlflow.middlewares=mlflow-headers"
+      - "traefik.http.middlewares.mlflow-headers.headers.customrequestheaders.Host=0.0.0.0"
+      - "traefik.http.middlewares.mlflow-headers.headers.customrequestheaders.Origin=http://0.0.0.0"
+      # ---------------------------------------------------
       # ----------------------------------
       - "traefik.http.services.waterflow-mlflow.loadbalancer.server.port=5000"
     restart: unless-stopped
