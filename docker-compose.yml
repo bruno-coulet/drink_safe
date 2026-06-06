@@ -137,7 +137,7 @@ services:
       - "traefik.http.routers.waterflow-mlflow.tls.certresolver=myresolver"
       - "traefik.http.services.waterflow-mlflow.loadbalancer.server.port=5000"
     restart: unless-stopped
-    command: sh -c "exec mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
+    command: sh -c "exec mlflow server --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB} --serve-artifacts --artifacts-destination /app/artifacts --host 0.0.0.0 --port 5000"
 
     healthcheck:
       start_period: 60s

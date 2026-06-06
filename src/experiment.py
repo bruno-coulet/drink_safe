@@ -16,16 +16,16 @@ import pandas as pd
 import psycopg2
 import requests
 
-_old_prepare_headers = requests.models.PreparedRequest.prepare_headers
 
+# _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
 
-def patched_prepare_headers(self, headers):
-    _old_prepare_headers(self, headers)
-    # On force l'en-tête Host pour tromper la sécurité stricte d'Uvicorn
-    self.headers["Host"] = "localhost:5000"
+# def patched_prepare_headers(self, headers):
+#     _old_prepare_headers(self, headers)
+#     # On force l'en-tête Host pour tromper la sécurité stricte d'Uvicorn
+#     self.headers["Host"] = "localhost:5000"
 
+# requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 
-requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 
 from src.config import settings
 from src.models import get_models
