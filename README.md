@@ -58,6 +58,35 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 
 ### Architecture de la Stack Réseau
 
+```mermaid
+flowchart LR
+    %% Définition des styles
+    classDef container fill:#0288d1,stroke:#01579b,stroke-width:2px,color:#fff;
+    classDef db fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff;
+    classDef network fill:#eceff1,stroke:#cfd8dc,stroke-dasharray: 5 5;
+
+    subgraph "Réseau externe : traefik"
+        Proxy{{"Traefik Proxy"}}
+    end
+
+    subgraph "Réseau interne : waterflow_internal"
+        FRONT["📦 front<br/>(Port interne : 8501)"]:::container
+        API["📦 api-unique<br/>(Port interne : 8000)"]:::container
+        MLFLOW["📦 mlflow-back<br/>(Port interne : 5000)"]:::container
+        DB[("📦 postgres-db<br/>(Port interne : 5432)")]:::db
+
+        FRONT -- "http://api-unique:8000" --> API
+        API -- "http://mlflow-back:5000" --> MLFLOW
+        API -- "postgresql://..." --> DB
+        MLFLOW -- "postgresql://..." --> DB
+    end
+
+    %% Expositions
+    Proxy -- "Routage par Nom de domaine" --> FRONT
+    Proxy -- "Routage par Nom de domaine" --> API
+    Proxy -- "Routage par Nom de domaine" --> MLFLOW
+```
+
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
 
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
@@ -70,6 +99,69 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 ---
 
 ## Architecture MLOps, Persistance Réseau & Sécurité
+
+```mermaid
+graph TD
+    %% Définition des styles
+    classDef proxy fill:#f9a826,stroke:#333,stroke-width:2px,color:#fff;
+    classDef service fill:#2196f3,stroke:#333,stroke-width:2px,color:#fff;
+    classDef db fill:#4caf50,stroke:#333,stroke-width:2px,color:#fff;
+    classDef volume fill:#9e9e9e,stroke:#333,stroke-width:2px,color:#fff;
+    classDef local fill:#9c27b0,stroke:#333,stroke-width:2px,color:#fff;
+
+    %% Acteurs externes
+    User((🧑‍🔬 Utilisateur / Expert))
+    OCR[☁️ API Externe OCR.space]
+
+    %% Infrastructure VPS
+    subgraph "☁️ Serveur de Production (VPS)"
+        Traefik{{"🚦 Traefik (Reverse Proxy)<br/>Ports 80 / 443"}}:::proxy
+
+        subgraph "Réseau Docker (waterflow_internal)"
+            Front["🖥️ Streamlit (front)<br/>UI Experte"]:::service
+            API["⚡ FastAPI (api-unique)<br/>Orchestrateur Unifié"]:::service
+            MLflow["📊 MLflow (mlflow-back)<br/>Registre de Modèles"]:::service
+            Postgres[("🗄️ PostgreSQL 16 (postgres-db)<br/>SGBD Relationnel")]:::db
+        end
+
+        subgraph "Volumes Persistants (Machine Hôte)"
+            VolDB[/"📂 postgres_waterflow_data"/]:::volume
+            VolArt[/"📦 mlruns_artifacts"/]:::volume
+        end
+    end
+
+    %% Environnement Local
+    subgraph "💻 PC Développeur (Local WSL)"
+        DevScript["⚙️ src.experiment<br/>(Pipeline MLOps)"]:::local
+        DevData[/"📊 Données Locales<br/>(water_std.csv)"/]:::volume
+    end
+
+    %% Routage Externe
+    User -- "HTTPS (waterflow.lab...)" --> Traefik
+    User -- "HTTPS (api.waterflow.lab...)" --> Traefik
+    User -- "HTTPS (mlflow.waterflow.lab...)" --> Traefik
+
+    %% Routage Traefik -> Conteneurs
+    Traefik -.-> Front
+    Traefik -.-> API
+    Traefik -.-> MLflow
+
+    %% Communications Internes API
+    Front -- "Requêtes REST" --> API
+    API -- "Extraction PDF/Img" --> OCR
+    API -- "Historique & Logs" --> Postgres
+    API -- "Vérifie les versions" --> MLflow
+    API -. "Charge en RAM (Lazy Load)" .-> VolArt
+
+    %% Communications MLflow
+    MLflow -- "Métadonnées" --> Postgres
+    MLflow -- "Modèles Physiques (.pkl)" --> VolArt
+    Postgres --> VolDB
+
+    %% Flux d'entraînement local
+    DevData --> DevScript
+    DevScript -- "Artifact Proxy HTTPS" --> Traefik
+```
 
 ### 1. Découplage BDD (Métadonnées) vs Volume Local (Artefacts)
 
