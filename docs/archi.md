@@ -12,7 +12,7 @@
 
 ```mermaid
 graph TD
-    subgraph Presentation [Couche Présentation - Hôte local]
+    subgraph Presentation [Couche Presentation - Hote local]
         UI[IHM Streamlit<br/>Port 8501]
     end
 
@@ -20,20 +20,20 @@ graph TD
         FastAPI[API Unique FastAPI<br/>api-unique : Port 8000]
     end
 
-    subgraph MLOps [Couche Tracking & Données - Docker]
+    subgraph MLOps [Couche Tracking & Donnees - Docker]
         MLflow[MLflow Tracking Server<br/>mlflow-back : Port 5000]
-        Postgres[(PostgreSQL 16<br/>postgres-db : Port 5432)]
+        Postgres[(PostgreSQL 16<br/>postgres-db  Port 5432)]
         Vols[(Volume local partagé<br/>./mlruns_artifacts)]
     end
 
     %% Flux et connexions
-    UI -->|1. Requêtes API (Clé Auth)| FastAPI
+    UI -->|1. Requêtes API Clé Auth| FastAPI
     FastAPI -->|2. Persiste clients, prélèvements et logs| Postgres
     FastAPI -->|3. OCR & Business Rules| FastAPI
-    FastAPI -->|4. Interroge le Registre (Métadonnées)| MLflow
+    FastAPI -->|4. Interroge le Registre Métadonnées| MLflow
     MLflow -->|5. Backend Store SQL| Postgres
     MLflow -->|6. Artifact Store| Vols
-    FastAPI -.->|7. Lazy Loading des modèles (.pkl)| Vols
+    FastAPI -.->|7. Lazy Loading des modèles .pkl| Vols
 ```
 
 

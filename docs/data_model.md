@@ -13,46 +13,45 @@ Le dictionnaire de données métier s'articule autour de la traçabilité, du cl
 ```mermaid
 erDiagram
     CLIENTS {
-        varchar client_id PK "Identifiant unique (ex: LOR_01)"
+        varchar client_id PK "Identifiant unique"
         varchar denomination "Nom de l'entreprise ou laboratoire"
         text adresse "Adresse postale"
-        varchar api_key UK "Clé unique d'authentification générée cryptographiquement"
+        varchar api_key UK "Cle unique d'authentification generee cryptographiquement"
         timestamp cree_le "Date d'inscription"
     }
-    
+
     PRELEVEMENTS {
-        int id PK "SERIAL (Identifiant technique auto-incrémenté)"
-        varchar client_id FK "Référence au propriétaire (clients.client_id)"
+        int id PK "SERIAL (Identifiant technique auto-incremente)"
+        varchar client_id FK "Reference au proprietaire (clients.client_id)"
         varchar provenance "Vecteur d'ingestion (Saisie / OCR)"
         float ph "Potentiel Hydrogène"
-        float hardness "Dureté de l'eau (mg/L)"
+        float hardness "Durete de l'eau (mg/L)"
         float solids "Solides totaux dissous (ppm)"
         float chloramines "Concentration en chloramines (ppm)"
         float sulfate "Concentration en sulfates (mg/L)"
-        float conductivity "Conductivité électrique (µS/cm)"
+        float conductivity "Conductivite electrique (µS/cm)"
         float organic_carbon "Carbone organique total (mg/L)"
-        float trihalomethanes "Trihalométhanes totaux (µg/L)"
-        float turbidity "Turbidité de l'eau (NTU)"
-        int prediction_potability "Résultat inférence (0 ou 1)"
-        varchar model_version "Modèle ayant pris la décision"
-        text observations "Commentaires libres ou métadonnées"
+        float trihalomethanes "Trihalomethanes totaux (µg/L)"
+        float turbidity "Turbidite de l'eau (NTU)"
+        int prediction_potability "Resultat inference (0 ou 1)"
+        varchar model_version "Modèle ayant pris la decision"
+        text observations "Commentaires libres ou metadonnees"
         timestamp cree_le "Horodatage de l'insertion"
     }
 
     ACTION_LOGS {
         int id PK "SERIAL"
         varchar client_id "Identifiant du client ou ANONYMOUS"
-        varchar api_key_used "Masquée pour sécurité (wf_live_***)"
-        text endpoint "Route appelée (ex: /api/predict)"
-        varchar method "Méthode HTTP (POST, GET)"
-        int status_code "Code de retour (200, 401, 500)"
-        int execution_duration_ms "Durée de traitement en millisecondes"
+        varchar api_key_used "Masquee pour securite wf_live_***"
+        text endpoint "Route appelee ex /api/predict"
+        varchar method "Methode HTTP POST, GET"
+        int status_code "Code de retour 200, 401, 500"
+        int execution_duration_ms "Duree de traitement en millisecondes"
         timestamp execute_le "Horodatage de l'action"
     }
 
     CLIENTS ||--o{ PRELEVEMENTS : "historise et possède"
-    CLIENTS ||--o{ ACTION_LOGS : "génère des logs d'accès"
-
+    CLIENTS ||--o{ ACTION_LOGS : "genere des logs d'accès"
 ```
 
 ---
