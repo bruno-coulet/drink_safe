@@ -30,6 +30,7 @@
 │   ├── archi.md
 │   ├── bugfix.md
 │   ├── data_model.md
+│   ├── schema.md
 │   └── user_stories.md
 ├── front
 │   ├── app.py
@@ -37,8 +38,171 @@
 │       └── eau.webp
 ├── img
 │   ├── archi_.png
-│   └── bdd.svg
+│   ├── mermaid-diagram.png
+│   └── model_logique_donnee.svg
 ├── mlruns_artifacts
+│   └── 1
+│       ├── 26567bf6997c47eead292143a4f90c63
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── 305ce7503a2b441180b77b2b7d2484e2
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── 3324fcd685a34a269ce16713cf7f5761
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 56806330800a4ffea5bb85f897d93cda
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 616c901184f74ab3b70809a673c60d3f
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 6bd98ad9e0c842159f39e7547601e4c1
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 7415ad36e7594022ab97d291b5515d92
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── 7f45439509294ee8897bd72138d9ca88
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 8724118342ec4bbdaf3ca8017e5aaa39
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── a4fed589d9284f5dbce18a79c9c93187
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── af7420937de54b7ebd529c586d234aad
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       └── fcba3fa8b8774042b1027852e8a280ae
+│           └── artifacts
+│               └── model
+│                   ├── MLmodel
+│                   ├── conda.yaml
+│                   ├── metadata
+│                   │   ├── MLmodel
+│                   │   ├── conda.yaml
+│                   │   ├── python_env.yaml
+│                   │   └── requirements.txt
+│                   ├── model.pkl
+│                   ├── python_env.yaml
+│                   └── requirements.txt
 ├── notebooks
 │   ├── __init__.py
 │   └── eda.ipynb
@@ -540,8 +704,11 @@
 │               └── requirements.txt
 ├── src
 │   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
 │   │   ├── api.cpython-312.pyc
 │   │   ├── config.cpython-312.pyc
+│   │   ├── experiment.cpython-312.pyc
+│   │   ├── middleware.cpython-312.pyc
 │   │   └── models.cpython-312.pyc
 │   ├── analysis_utils.py
 │   ├── api.py
@@ -584,6 +751,12 @@
 │   ├── test_functionnal.py
 │   ├── test_non_regression.py
 │   └── test_unit.py
-└── uv.lock
+├── uv.lock
+└── waterflow.egg-info
+    ├── PKG-INFO
+    ├── SOURCES.txt
+    ├── dependency_links.txt
+    ├── requires.txt
+    └── top_level.txt
 
-120 directories, 467 files
+170 directories, 590 files
