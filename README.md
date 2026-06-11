@@ -5,11 +5,18 @@
 Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
-- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser l'analyse, le suivi, l'ingestion OCR et la prédiction.
+- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser :
+    - l'analyse
+    - le suivi
+    - l'ingestion OCR
+    - la prédiction.
 
 Réalisé sous l'environnement WSL2, le système intègre :
 - une interface utilisateur réactive (Streamlit).
-- une **API Unique unifiée (FastAPI)** gérant l'ingestion des données (Data), l'extraction documentaire (OCR) et les prédictions (Model) protégées par des garde-fous sanitaires.
+- une **API Unique unifiée (FastAPI)** gérant :
+    - l'ingestion des données (Data)
+    - l'extraction documentaire (OCR)
+    - les prédictions (Model) protégées par des garde-fous sanitaires.
 - un serveur de tracking et registre de modèles d'Intelligence Artificielle (MLflow) connecté à une base PostgreSQL.
 
 ## Jeu de données
@@ -24,7 +31,7 @@ Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'es
 
 ---
 
-## Quickstart (Lancement Rapide Production)
+## Quickstart (Production)
 
 Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
@@ -34,9 +41,14 @@ Assurez-vous que **Docker Desktop** (avec intégration WSL2) est actif, puis dé
 docker compose up -d
 ```
 
-L'interface graphique de suivi MLflow devient accessible sur : https://mlflow.waterflow.lab.zanza-creation.com
-L'API Unique et sa documentation Swagger sont disponibles sur : https://api.waterflow.lab.zanza-creation.com/docs
-L'interface experte Streamlit est disponible sur : https://waterflow.lab.zanza-creation.com
+L'interface graphique de suivi MLflow
+https://mlflow.waterflow.lab.zanza-creation.com
+
+L'API Unique et sa documentation Swagger
+https://api.waterflow.lab.zanza-creation.com/docs
+
+L'interface experte Streamlit
+https://waterflow.lab.zanza-creation.com
 
 ---
 
@@ -52,9 +64,12 @@ L'interface experte Streamlit est disponible sur : https://waterflow.lab.zanza-c
 
 Les données sont segmentées et partagées avec les conteneurs dans le répertoire `data/` :
 
-* `data/raw/water_potability.csv` : Jeu de données brut d'origine.
-* `data/processed/water_imputed.csv` : Données imputées par la médiane (pour Random Forest, XGBoost).
-* `data/processed/water_std.csv` : Données imputées et standardisées (pour Régression Logistique, MLP Classifier).
+|||
+|-|-|
+| `data/raw/water_potability.csv` | Jeu de données brut d'origine.|
+| `data/processed/water_imputed.csv` | Données imputées par la médiane (pour Random Forest, XGBoost)|
+| `data/processed/water_std.csv` | Données imputées et standardisées (pour Régression Logistique, MLP Classifier)|
+
 
 ### Architecture de la Stack Réseau
 
@@ -92,7 +107,7 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
 | --- | --- | --- | --- | --- |
 | **Interface UI** | Streamlit (`front`) | 8501 | Conteneur Docker | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
-| **API Unique** | FastAPI (`api-unique`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
+| **API** | FastAPI (`api-unique`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
 | **Registre MLOps** | MLflow (`mlflow-back`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
 | **Base de Données** | PostgreSQL 16 (`postgres-db`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
 

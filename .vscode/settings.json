@@ -1,41 +1,43 @@
 {
     "security.allowedUNCHosts": ["wsl.localhost"],
+
     "files.autoSave": "afterDelay",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
     "accessibility.signals.lineHasInlineSuggestion": { "sound": "off" },
+
     "editor.accessibilitySupport": "off",
-    "terminal.integrated.initialHint": false,
-    "workbench.colorCustomizations": {},
-
-    "python.defaultInterpreterPath": ".venv/bin/python",
-    "python.analysis.extraPaths": ["./src"],
-    "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.diagnosticMode": "workspace",
-
     "editor.inlineSuggest.enabled": true,
     "editor.suggestSelection": "first",
+
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "charliermarsh.ruff",
+
     "editor.codeActionsOnSave": {
         "source.fixAll": "explicit",
         "source.organizeImports": "explicit"
     },
 
+    "terminal.integrated.initialHint": false,
+
+    "workbench.colorCustomizations": {},
+
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+    // "python.analysis.extraPaths": ["./src"],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
+
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-        }
     },
 
     "ruff.enable": true,
+    "ruff.nativeServer": true,
 
     "jupyter.askForKernelRestart": false,
     "jupyter.interactiveWindow.textEditor.executeSelection": true,
 
     "csv-preview.separator": ",",
 
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
 }

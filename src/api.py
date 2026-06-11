@@ -8,22 +8,21 @@ Description : Serveur FastAPI unifié orchestrant l'initialisation de PostgreSQL
 -------------------------------------------------------------------------------
 """
 
-import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List
-import pandas as pd
+
 import mlflow
 import mlflow.sklearn
+import psycopg2
 from fastapi import FastAPI, Request, Response
 from mlflow.tracking import MlflowClient
-import psycopg2
 
-from src.config import settings, init_db
+from src.config import init_db, settings
 from src.routes.clients import router as clients_router
 from src.routes.measurements import router as measurements_router
-from src.routes.predictions import router as predictions_router
 from src.routes.ocr import router as ocr_router
+from src.routes.predictions import router as predictions_router
 
 # --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
 # import requests
