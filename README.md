@@ -2,14 +2,21 @@
 ## Centralisation API Unique, Ingestion OCR & MLOps
 
 ## Contexte du projet
-Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).   
+Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
-- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser l'analyse, le suivi, l'ingestion OCR et la prédiction. 
-    
+- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser :
+- l'analyse
+- le suivi
+- l'ingestion OCR
+- la prédiction.
+
 Réalisé sous l'environnement WSL2, le système intègre :
 - une interface utilisateur réactive (Streamlit).
-- une **API Unique unifiée (FastAPI)** gérant l'ingestion des données (Data), l'extraction documentaire (OCR) et les prédictions (Model) protégées par des garde-fous sanitaires.
+- une **API Unique unifiée (FastAPI)** gérant :
+    - l'ingestion des données (Data)
+    - l'extraction documentaire (OCR)
+    - les prédictions (Model) protégées par des garde-fous sanitaires.
 - un serveur de tracking et registre de modèles d'Intelligence Artificielle (MLflow) connecté à une base PostgreSQL.
 
 ## Jeu de données
@@ -24,18 +31,26 @@ Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'es
 
 ---
 
-## Quickstart (Lancement Rapide Production)
+## Quickstart (Production)
 
 Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
 ### 1. Démarrer l'infrastructure et l'API
-Assurez-vous que **Docker Desktop** (avec intégration WSL2) est actif, puis déployez l'environnement (Base de données, serveur MLflow et API Unique) :
+**Docker Desktop** (avec intégration WSL2) doit être actif
+
+**Déployement de l'environnement**
+- Base de données
+- serveur MLflow
+- serveur API Unique
 ```bash
 docker compose up -d postgres-db mlflow-back api-unique
 ```
 
-L'interface graphique de suivi MLflow devient accessible sur : http://127.0.0.1:5000
-L'API Unique et sa documentation Swagger sont disponibles sur : http://127.0.0.1:8000/docs
+L'interface de suivi MLflow
+http://127.0.0.1:5000
+
+L'API Unique et sa documentation Swagger
+http://127.0.0.1:8000/docs
 
 ### 2. Interface Frontend (Streamlit)
 
@@ -45,7 +60,8 @@ Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hô
 uv run streamlit run front/app.py
 ```
 
-Interface utilisateur disponible sur : http://localhost:8501
+Interface utilisateur
+http://localhost:8501
 
 ---
 
@@ -61,9 +77,11 @@ Interface utilisateur disponible sur : http://localhost:8501
 
 Les données sont segmentées et partagées avec les conteneurs dans le répertoire `data/` :
 
-* `data/raw/water_potability.csv` : Jeu de données brut d'origine.
-* `data/processed/water_imputed.csv` : Données imputées par la médiane (pour Random Forest, XGBoost).
-* `data/processed/water_std.csv` : Données imputées et standardisées (pour Régression Logistique, MLP Classifier).
+|||
+|-|-|
+| `data/raw/water_potability.csv` | Jeu de données brut d'origine|
+| `data/processed/water_imputed.csv` | Données imputées par la médiane (pour Random Forest, XGBoost)|
+| `data/processed/water_std.csv` | Données imputées et standardisées (pour Régression Logistique, MLP Classifier)|
 
 ### Architecture de la Stack Réseau
 
@@ -96,7 +114,7 @@ Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut
 
 ## Scénarios d'Exécution & Cycle de Vie
 
-**Pré-requis :** Créez un fichier `.env` à la racine du projet :
+**Pré-requis :** Créer un fichier `.env` à la racine du projet :
 
 ```env
 POSTGRES_PASSWORD=MonMotDePasseSecurise123!
@@ -115,7 +133,15 @@ Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du
 docker compose up mlops-training
 ```
 
-*Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.* Il entraîne les 4 architectures, publie les métriques et écrit les artefacts binaires dans le volume partagé avant de s'arrêter proprement (`exited with code 0`).
+*Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.*
+
+Le container `mlops-training` :
+- entraîne les 4 architectures
+- publie les métriques
+- écrit les artefacts binaires dans le volume partagé
+- s'arrête proprement (`exited with code 0`).
+
+---
 
 ### Couche "Garde-fou Métier" (Business Rules)
 
@@ -131,7 +157,8 @@ Une couche de règles métiers strictes est exécutée en amont de l'inférence.
 
 Pour piloter le projet, il est important de choisir le mode de lancement adapté :
 
-1. Mode Production (Déploiement complet)
+### Mode Production (Déploiement complet)
+
 Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec ses conteneurs isolés.
 
 ```shell
@@ -142,10 +169,10 @@ Cela lance tous les services (BDD, MLflow, API) de manière isolée et persistan
 
 Accès API sur http://127.0.0.1:8000.
 
-2. Mode Développement (Édition de code)
+### Mode Développement (Édition de code)
 Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
 
-Pré-requis : 
+Pré-requis :
 - Demarer les services de données lancés avec Docker
     - `docker compose up -d postgres-db mlflow-back`
 - Arrêter le conteneur API
