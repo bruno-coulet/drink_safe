@@ -7,7 +7,7 @@ Description : Intercepteur et validateur de clés API stockées en base de donn�
 -------------------------------------------------------------------------------
 """
 
-from fastapi import Security, HTTPException, status
+from fastapi import Security, HTTPException, status, Request
 from fastapi.security.api_key import APIKeyHeader
 import psycopg2
 
@@ -18,14 +18,16 @@ API_KEY_NAME: str = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
-def get_current_client(api_key: str = Security(api_key_header)) -> str:
+def get_current_client(request: Request, api_key: str = Security(api_key_header)) -> str:
     """Valide la clé API fournie et retourne l'identifiant du client associé.
 
     Cette dépendance FastAPI extrait le token du header, vérifie sa correspondance
-    exacte en base de données PostgreSQL et remonte une erreur 401 si le jeton est 
-    invalide ou absent.
+    exacte en base de données PostgreSQL et remonte une erreur 401 si le jeton est
+    invalide ou absent. Le client_id résolu est déposé dans `request.state` pour
+    permettre au middleware de journalisation de tracer le client (RGPD).
 
     Args:
+        request (Request): Requête HTTP courante (sert à exposer le client_id au middleware).
         api_key (str): Jeton d'authentification extrait du header HTTP.
 
     Returns:
@@ -54,8 +56,11 @@ def get_current_client(api_key: str = Security(api_key_header)) -> str:
                 detail="Clé API invalide ou révoquée."
             )
             
+        # On expose l'ID technique du client au middleware via request.state (traçabilité RGPD)
+        client_id: str = str(result[0])
+        request.state.client_id = client_id
         # On retourne l'ID technique du client (ex: LOR_EAU_01) pour filtrer ses données
-        return str(result[0])
+        return client_id
 
     except HTTPException:
         raise
