@@ -15,5 +15,8 @@
     // FORCE LE MOTEUR DE TYPES À ANALYSER DEPUIS SRC
     "python.analysis.importPaths": [
         "./src"
-    ]
+    ],
+
+    "emmet.triggerExpansionOnTab": true
+
 }
