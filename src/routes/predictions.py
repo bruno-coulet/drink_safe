@@ -33,7 +33,7 @@ class PredictionRequest(BaseModel):
     Sulfate: float = Field(..., description="Concentration en sulfates en mg/L")
     Conductivity: float = Field(..., description="Conductivité électrique en μS/cm")
     Organic_carbon: float = Field(..., description="Carbone organique total en ppm")
-    Trihalomethanes: float = Field(..., description="Concentration en trihalométhanes en μg/L")
+    Trihalomethanes: float = Field(..., description="Concentration en trihalométhanes en ppm")
     Turbidity: float = Field(..., description="Turbidité de l'eau en NTU")
     observations: Optional[str] = Field(None, description="Note contextuelle optionnelle")
 
@@ -76,9 +76,10 @@ def executer_prediction(
 
 
 # 2. ACCÈS AU REGISTRE DE MODÈLES (Lazy Loading MLOps Dynamique)
-    from src.api import ml_models
+    from src.api import ml_models, ml_model_versions
     model = ml_models.get(payload.model_choice)
-    
+    version_modele: str = ml_model_versions.get(payload.model_choice, "inconnue")
+
     # Si le modèle n'est pas en mémoire, on cherche la dernière version à la volée
     if not model:
         print(f"[Lazy Load] Modèle '{payload.model_choice}' non trouvé en mémoire. Recherche de la dernière version...")
@@ -101,8 +102,10 @@ def executer_prediction(
             print(f"[Lazy Load] Téléchargement de la version {derniere_version} depuis {model_uri}...")
             model = mlflow.sklearn.load_model(model_uri)
             
-            # Mise en cache pour les prochaines requêtes
+            # Mise en cache pour les prochaines requêtes (modèle + version)
             ml_models[payload.model_choice] = model
+            ml_model_versions[payload.model_choice] = str(derniere_version)
+            version_modele = str(derniere_version)
             print(f"[Lazy Load] ✓ {nom_registre} (v{derniere_version}) mis en cache avec succès !")
             
         except Exception as e:
@@ -125,14 +128,14 @@ def executer_prediction(
         status_label: str = "Potable" if potability_result == 1 else "Non Potable"
         
         # Enregistrement de la décision finale du modèle ML en base de données
-        version_utilisee: str = f"{payload.model_choice}_v1"
+        version_utilisee: str = f"{payload.model_choice}_v{version_modele}"
         _sauvegarder_prelevement_en_bdd(client_id, payload, potability_result, version_utilisee)
 
         return {
             "prediction": potability_result,
             "status": status_label,
             "model_used": payload.model_choice,
-            "model_version": "1"
+            "model_version": version_modele
         }
 
     except Exception as e:

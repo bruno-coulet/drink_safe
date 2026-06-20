@@ -44,6 +44,8 @@ mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 
 # Registre en mémoire pour stocker les instances de modèles chargées
 ml_models: Dict[str, Any] = {}
+# Registre parallèle des versions chargées (algo_key -> numéro de version)
+ml_model_versions: Dict[str, str] = {}
 
 
 
@@ -61,52 +63,56 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         client = MlflowClient()
         registered_models = client.search_registered_models()
-        
+
         for rm in registered_models:
             model_name: str = rm.name
             if model_name.startswith("WaterModel_"):
                 algo_key: str = model_name.replace("WaterModel_", "")
-                
+
                 # 1. Récupération de la dernière version du modèle enregistrée
                 latest_versions = rm.latest_versions
                 if not latest_versions:
-                    print(f"⚠️ Aucune version trouvée pour {model_name}")
+                    print(f"Aucune version trouvée pour {model_name}")
                     continue
-                    
+
                 latest_v = latest_versions[0]
+                version = latest_v.version
                 run_id = latest_v.run_id
-                
+
                 # 2. Stratégie de chargement hybride (Sécurité Production)
                 loaded = False
-                
-                # Tentative A : Via l'URI classique nettoyé
+
+                # Tentative A : Via l'URI du Registre sur la DERNIÈRE version
                 try:
-                    model_uri = f"models:/{model_name}/1"
-                    ml_models[algo_key] = mlflow.sklearn.load_model(model_uri.rstrip("/."))
-                    print(f"✓ {model_name} chargé avec succès via l'URI du Registre.")
+                    model_uri = f"models:/{model_name}/{version}"
+                    ml_models[algo_key] = mlflow.sklearn.load_model(model_uri)
+                    ml_model_versions[algo_key] = str(version)
+                    print(f"✓ {model_name} (v{version}) chargé avec succès via l'URI du Registre.")
                     loaded = True
                 except Exception:
                     pass
-                
-                # Tentative B (Fallback Industriel) : Si le dossier /1/ est introuvable, 
+
+                # Tentative B (Fallback Industriel) : Si le dossier de version est introuvable,
                 # on bascule sur l'URI directe du Run ID (qui pointe sur les dossiers m-XXXX)
                 if not loaded:
                     try:
                         fallback_uri = f"runs:/{run_id}/model"
                         ml_models[algo_key] = mlflow.sklearn.load_model(fallback_uri)
-                        print(f"✓ {model_name} chargé avec succès via Fallback (Run ID: {run_id}).")
+                        ml_model_versions[algo_key] = str(version)
+                        print(f"✓ {model_name} (v{version}) chargé avec succès via Fallback (Run ID: {run_id}).")
                         loaded = True
                     except Exception as e_fallback:
                         print(f"⚠️ Impossible de charger le modèle {model_name} : {e_fallback}")
-                        
+
     except Exception as e:
         print(f"⚠️ Mode dégradé enclenché : Échec de connexion à MLflow UI : {e}")
-        
+
     yield
-    
+
     # ---- ACTIONS À L'ARRÊT ----
     print("[API Unique] Libération des ressources et fermeture du serveur...")
     ml_models.clear()
+    ml_model_versions.clear()
 
 
 
@@ -124,19 +130,20 @@ app = FastAPI(
 async def journaliser_requete_et_temps(request: Request, call_next: Any) -> Response:
     """Intercepte chaque appel API pour mesurer sa durée et l'auditer en BDD."""
     start_time: float = time.time()
-    
+
     # Extraction de la clé API présente dans les en-têtes pour la traçabilité
     api_key_utilisee: str = request.headers.get("X-API-Key", "Pas de clé transmise")
-    
+
     # Poursuite de la requête vers son endpoint cible
     response: Response = await call_next(request)
-    
+
     # Calcul du temps de traitement de la requête en millisecondes
     duration_ms: int = int((time.time() - start_time) * 1000)
-    
-    # Extraction optionnelle du client_id si déjà résolu ou traitement anonyme
-    client_id_tracé: str = "ANONYMOUS"
-    
+
+    # Récupération du client_id résolu par la dépendance d'auth (déposé dans request.state).
+    # Reste "ANONYMOUS" pour les endpoints non authentifiés ou en cas d'échec d'auth.
+    client_id_tracé: str = getattr(request.state, "client_id", "ANONYMOUS")
+
     # Écriture asynchrone / découplée des logs dans PostgreSQL (Garantit l'audit de sécurité)
     query_log: str = """
     INSERT INTO action_logs (
@@ -158,7 +165,7 @@ async def journaliser_requete_et_temps(request: Request, call_next: Any) -> Resp
     except Exception as e:
         # Un échec de log ne doit jamais bloquer la réponse HTTP du client en production
         print(f"⚠️ Erreur MLOps lors de l'enregistrement du log de monitoring : {e}")
-        
+
     return response
 
 
