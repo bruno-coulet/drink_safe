@@ -31,7 +31,7 @@ erDiagram
         float sulfate "Concentration en sulfates (mg/L)"
         float conductivity "Conductivite electrique (µS/cm)"
         float organic_carbon "Carbone organique total (mg/L)"
-        float trihalomethanes "Trihalomethanes totaux (µg/L)"
+        float trihalomethanes "Trihalomethanes totaux (ppm)"
         float turbidity "Turbidite de l'eau (NTU)"
         int prediction_potability "Resultat inference (0 ou 1)"
         varchar model_version "Modèle ayant pris la decision"

@@ -5,7 +5,7 @@
 Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
-- une architecture industrielle multiniveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser :
+- une architecture industrielle multi-niveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser :
 - l'analyse
 - le suivi
 - l'ingestion OCR
@@ -18,6 +18,12 @@ Réalisé sous l'environnement WSL2, le système intègre :
     - l'extraction documentaire (OCR)
     - les prédictions (Model) protégées par des garde-fous sanitaires.
 - un serveur de tracking et registre de modèles d'Intelligence Artificielle (MLflow) connecté à une base PostgreSQL.
+
+## Architecture globale
+
+L'application est segmentée en couches isolées (présentation, logicielle/inférence, données) communiquant par HTTP. La couche données sépare le stockage des métadonnées MLflow (PostgreSQL) de celui des artefacts binaires (volume partagé).
+
+![Architecture Waterflow 2](img/architecture_v.png)
 
 ## Jeu de données
 Le jeu de données contient :
@@ -36,7 +42,8 @@ Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'es
 Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
 ### 1. Démarrer l'infrastructure et l'API
-**Docker Desktop** (avec intégration WSL2) doit être actif
+Démarrer **Docker Desktop**
+Avec intégration WSL2 : settings/ressources/wsl integration
 
 **Déployement de l'environnement**
 - Base de données
@@ -104,7 +111,7 @@ Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds 
 
 * **Backend Store (BDD) :** MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
 * **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow-back`, `mlops-training` et `api-unique`.
-* **Lazy Loading Dynamique :** L'API charge les modèles en mémoire (RAM) à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant une résilience totale aux redémarrages.
+* **Préchargement et Lazy Loading :** Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
 
 ### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
@@ -141,6 +148,8 @@ Le container `mlops-training` :
 - écrit les artefacts binaires dans le volume partagé
 - s'arrête proprement (`exited with code 0`).
 
+![Pipeline d'entraînement MLOps](img/pipeline_mlops.png)
+
 ---
 
 ### Couche "Garde-fou Métier" (Business Rules)
@@ -151,6 +160,10 @@ Une couche de règles métiers strictes est exécutée en amont de l'inférence.
 * Turbidité > 5.0 NTU
 * Chloramines > 4.0 mg/L
 * Trihalométhanes > 80 ppm
+
+Le flux complet d'une requête de prédiction (authentification, garde-fous OMS, lazy loading du modèle, inférence et persistance) est détaillé ci-dessous :
+
+![Flux d'une prédiction](img/flux_prediction.png)
 
 
 ## Guide de lancement : Développement vs Production

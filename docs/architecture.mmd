@@ -1,0 +1,61 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'Segoe UI, Helvetica, sans-serif','fontSize':'15px','primaryColor':'#e8f0fe','primaryBorderColor':'#4285f4','lineColor':'#5f6368','clusterBkg':'#f8f9fa','clusterBorder':'#cfd8dc'}}}%%
+graph TD
+    user(["fa:fa-user Expert / Administrateur"])
+
+    subgraph PRESENTATION["COUCHE PRESENTATION  -  Hote local WSL2"]
+        UI["Interface Streamlit<br/><b>front/app.py</b><br/>Port 8501"]
+    end
+
+    subgraph APILAYER["COUCHE LOGICIELLE and INFERENCE  -  Conteneur Docker"]
+        direction TB
+        MW["Middleware HTTP<br/>Monitoring and Audit RGPD"]
+        AUTH["Authentification<br/>par cle API  (X-API-Key)"]
+        subgraph ROUTERS["API Unique FastAPI  -  api-unique : Port 8000"]
+            direction LR
+            R1["/api/clients<br/>Gestion des cles"]
+            R2["/api/measurements<br/>Prelevements"]
+            R3["/api/predict<br/>Garde-fous OMS + IA"]
+            R4["/api/ocr<br/>Ingestion fiches labo"]
+        end
+        CACHE["Cache modeles en RAM<br/>ml_models  (Lazy Loading)"]
+    end
+
+    subgraph EXTERN["SERVICES EXTERNES"]
+        OCRAPI["API OCR.space<br/>Extraction documentaire"]
+    end
+
+    subgraph DATA["COUCHE TRACKING and DONNEES  -  Conteneurs Docker"]
+        direction TB
+        MLFLOW["MLflow Tracking + Registry<br/>mlflow-back : Port 5000"]
+        PG[("PostgreSQL 16<br/>postgres-db : Port 5432<br/>Metier + Metadonnees MLflow")]
+        VOL[/"Volume partage local<br/>./mlruns_artifacts  (.pkl)"/]
+        TRAIN["Pipeline entrainement<br/>mlops-training  (ephemere)<br/>4 modeles ML"]
+    end
+
+    user --> UI
+    UI -->|"1 - Requetes HTTP + cle API"| MW
+    MW --> AUTH
+    AUTH --> ROUTERS
+    MW -.->|"2 - Logs d'acces (action_logs)"| PG
+    R1 -->|"3 - Persistance"| PG
+    R2 -->|"3 - Persistance"| PG
+    R3 -->|"4 - Historisation"| PG
+    R4 -->|"5 - OCR externe"| OCRAPI
+    R3 -->|"6 - Recupere modele"| CACHE
+    CACHE -.->|"7 - Lazy load .pkl"| VOL
+    R3 -->|"8 - Interroge registre"| MLFLOW
+    MLFLOW -->|"9 - Backend Store SQL"| PG
+    MLFLOW -->|"10 - Artifact Store"| VOL
+    TRAIN -->|"Entraine et publie"| MLFLOW
+    TRAIN -->|"Ecrit artefacts"| VOL
+
+    classDef ui fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#000;
+    classDef api fill:#e8f0fe,stroke:#4285f4,stroke-width:2px,color:#000;
+    classDef store fill:#e6f4ea,stroke:#34a853,stroke-width:2px,color:#000;
+    classDef ext fill:#fce8e6,stroke:#ea4335,stroke-width:2px,color:#000;
+    classDef train fill:#f3e8fd,stroke:#9334e6,stroke-width:2px,color:#000;
+    class UI ui;
+    class MW,AUTH,R1,R2,R3,R4,CACHE api;
+    class MLFLOW,PG,VOL store;
+    class OCRAPI ext;
+    class TRAIN train;

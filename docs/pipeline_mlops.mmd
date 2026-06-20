@@ -1,0 +1,43 @@
+%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'Segoe UI, Helvetica, sans-serif','fontSize':'15px','lineColor':'#5f6368','clusterBkg':'#f8f9fa','clusterBorder':'#cfd8dc'}}}%%
+graph TD
+    START(["docker compose up<br/>mlops-training  (ephemere)"])
+    WAIT["Temporisation sleep 15<br/>attente MLflow"]
+    INIT["init_db()<br/>creation tables SQL"]
+
+    subgraph DATASETS["Chargement des donnees - data/processed"]
+        D1["water_imputed.csv<br/>imputees par mediane"]
+        D2["water_std.csv<br/>imputees + standardisees"]
+    end
+
+    CAT["get_models()<br/>catalogue de 4 modeles"]
+
+    subgraph LOOP["Boucle d'entrainement (mlflow.start_run)"]
+        direction TB
+        SEL{"Modele necessite<br/>standardisation ?"}
+        RF["RandomForest / XGBoost<br/>donnees imputees"]
+        LR["LogisticRegression / MLP<br/>donnees standardisees"]
+        FIT["fit(X, y)<br/>+ train_accuracy"]
+        LOG["log_param / log_metric<br/>log_model -> WaterModel_*"]
+    end
+
+    MLFLOW["MLflow Tracking + Registry"]
+    PG[("PostgreSQL<br/>Backend Store (metadonnees)")]
+    VOL[/"Volume ./mlruns_artifacts<br/>Artifact Store (.pkl)"/]
+    DONE(["Conteneur s'arrete<br/>exited code 0"])
+
+    START --> WAIT --> INIT --> DATASETS
+    DATASETS --> CAT --> SEL
+    SEL -->|Non| RF --> FIT
+    SEL -->|Oui| LR --> FIT
+    FIT --> LOG --> MLFLOW
+    MLFLOW -->|Metriques + params| PG
+    MLFLOW -->|Artefacts serialises| VOL
+    LOG -.->|modele suivant| SEL
+    MLFLOW --> DONE
+
+    classDef ev fill:#e8f0fe,stroke:#4285f4,stroke-width:2px,color:#000;
+    classDef store fill:#e6f4ea,stroke:#34a853,stroke-width:2px,color:#000;
+    classDef data fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#000;
+    class MLFLOW,PG,VOL store;
+    class D1,D2 data;
+    class START,DONE ev;

@@ -101,7 +101,7 @@ with col2:
     sulfate = st.number_input("Sulfates (mg/L)", min_value=0.0, value=330.0, step=1.0)
     conductivity = st.number_input("Conductivité électrique (μS/cm)", min_value=0.0, value=420.0, step=1.0)
     organic_carbon = st.slider("Carbone Organique Total (ppm)", min_value=0.0, max_value=30.0, value=14.2, step=0.1)
-    trihalomethanes = st.slider("Trihalométhanes (μg/L)", min_value=0.0, max_value=130.0, value=66.3, step=0.1)
+    trihalomethanes = st.slider("Trihalométhanes (ppm)", min_value=0.0, max_value=130.0, value=66.3, step=0.1)
 
 turbidity = st.slider("Turbidité de l'eau (NTU)", min_value=0.0, max_value=7.0, value=3.8, step=0.1)
 
