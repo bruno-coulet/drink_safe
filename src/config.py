@@ -20,13 +20,13 @@ load_dotenv(BASE_DIR / ".env")
 
 class Settings:
     """Configuration globale s'adaptant dynamiquement à l'environnement."""
-    
+
     PROJECT_NAME: str = "Waterflow Unified API"
     VERSION: str = "2.0.0"
-    
+
     # Sécurité et Authentification (Clés API)
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-key-super-secrete")
-    
+
     # Détection du contexte : Sommes-nous dans un conteneur Docker ?
     IS_DOCKER: bool = os.path.exists("/.dockerenv")
 
@@ -36,15 +36,15 @@ class Settings:
     DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "MonMotDePasseSecurise123!")
     DB_NAME: str = "waterflow_db"
 
-   
-    
+
+
     # Assemblage propre et sécurisé de la chaîne de connexion
     # DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
     # nettoyer chaque composant individuellement
     DATABASE_URL: str = f"postgresql://{DB_USER.strip()}:{DB_PASSWORD.strip()}@{DB_HOST.strip()}:5432/{DB_NAME.strip()}"
-        
+
     # --- Configuration Dynamique MLflow ---
-    MLFLOW_TRACKING_URI: str = "http://mlflow-back:5000" if IS_DOCKER else "http:// 127.0.0.1:5000"
+    MLFLOW_TRACKING_URI: str = "http://mlflow-back:5000" if IS_DOCKER else "http://127.0.0.1:5000"
 
 
 # Instanciation unique (Pattern Singleton)
@@ -78,6 +78,8 @@ def init_db() -> None:
             trihalomethanes FLOAT,
             turbidity FLOAT,
             observations TEXT,
+            prediction_potability INT,
+            model_version VARCHAR(100),
             cree_le TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """,

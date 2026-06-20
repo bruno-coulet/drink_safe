@@ -28,7 +28,7 @@ class MeasurementCreate(BaseModel):
     Sulfate: float = Field(..., description="Concentration en sulfates en mg/L")
     Conductivity: float = Field(..., description="Conductivité électrique en μS/cm")
     Organic_carbon: float = Field(..., description="Carbone organique total en ppm")
-    Trihalomethanes: float = Field(..., description="Concentration en trihalométhanes en μg/L")
+    Trihalomethanes: float = Field(..., description="Concentration en trihalométhanes en ppm")
     Turbidity: float = Field(..., description="Turbidité de l'eau en NTU")
     observations: Optional[str] = Field(None, description="Remarques ou contexte du prélèvement")
 
@@ -84,7 +84,7 @@ def lister_prelevements_client(client_id: str = Depends(get_current_client)) -> 
     Returns:
         List[Dict[str, Any]]: Liste des enregistrements appartenant à ce client.
     """
-    query_select: str = "SELECT * FROM prelevements WHERE client_id = %s ORDER BY date_prelevement DESC;"
+    query_select: str = "SELECT * FROM prelevements WHERE client_id = %s ORDER BY cree_le DESC;"
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             # RealDictCursor permet de récupérer les lignes sous forme de dictionnaires Python propres (clé-valeur)
@@ -111,7 +111,7 @@ def vue_globale_admin(client_id: str = Depends(get_current_client)) -> List[Dict
     """
     # Note MLOps : En production, une vérification du rôle "admin" dans la table clients
     # viendrait se greffer ici.
-    query_select_all: str = "SELECT * FROM prelevements ORDER BY date_prelevement DESC;"
+    query_select_all: str = "SELECT * FROM prelevements ORDER BY cree_le DESC;"
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
