@@ -1,15 +1,15 @@
 %%{init: {'theme':'base', 'themeVariables': {'fontFamily':'Segoe UI, Helvetica, sans-serif','fontSize':'15px','primaryColor':'#e8f0fe','primaryBorderColor':'#4285f4','actorBkg':'#e8f0fe','actorBorder':'#4285f4'}}}%%
 sequenceDiagram
     autonumber
-    actor U as Expert (Streamlit)
-    participant API as API Unique<br/>(/api/predict)
+    actor U as Client / Expert
+    participant API as API Unique
     participant AUTH as Auth cle API
     participant OMS as Garde-fous OMS
-    participant CACHE as Cache ml_models
-    participant ML as MLflow + Volume
+    participant ML as 4 modeles (cache / lazy load)
     participant PG as PostgreSQL
 
-    U->>API: POST /api/predict (mesures + X-API-Key)
+    Note over U,API: Voie A - saisie directe : POST /predict/all<br/>Voie B - fiche OCR : POST /ocr/lab-report puis /predict/from-prelevement/{id}
+    U->>API: POST mesures (+ X-API-Key)
     API->>AUTH: get_current_client(api_key)
     AUTH-->>API: client_id valide
 
@@ -17,16 +17,14 @@ sequenceDiagram
     API->>OMS: Verification des seuils sanitaires
     alt Seuil critique depasse
         OMS-->>API: Rejet automatique (sans IA)
-        API->>PG: INSERT prelevement (prediction = 0)
-        API-->>U: 200 - Non Potable (Business Rules OMS)
+        API->>PG: prelevement prediction = 0 (Garde-fou OMS)
+        API-->>U: Non Potable (regle OMS)
     else Seuils conformes
-        API->>CACHE: ml_models.get(model_choice)
-        alt Modele absent du cache
-            CACHE->>ML: Lazy load derniere version (.pkl)
-            ML-->>CACHE: Modele charge + mis en cache RAM
+        loop pour chacun des 4 modeles
+            API->>ML: charge (cache ou lazy load) + predict + predict_proba
+            ML-->>API: prediction (0/1) + score de potabilite
         end
-        CACHE-->>API: Instance du modele
-        API->>API: model.predict(features)
-        API->>PG: INSERT prelevement (prediction 0/1)
-        API-->>U: 200 - Potable / Non Potable + modele utilise
+        API->>API: consensus = vote majoritaire (egalite -> Non Potable)
+        API->>PG: INSERT (saisie) ou UPDATE (prelevement OCR) du consensus
+        API-->>U: consensus + detail des 4 modeles + scores
     end

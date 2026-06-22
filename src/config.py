@@ -68,6 +68,7 @@ def init_db() -> None:
             id SERIAL PRIMARY KEY,
             client_id VARCHAR(50) REFERENCES clients(client_id),
             provenance VARCHAR(20) NOT NULL,
+            lieu VARCHAR(255),
             ph FLOAT,
             hardness FLOAT,
             solids FLOAT,

@@ -87,8 +87,8 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 |||
 |-|-|
 | `data/raw/water_potability.csv` | Jeu de données brut d'origine|
-| `data/processed/water_imputed.csv` | Données imputées par la médiane (pour Random Forest, XGBoost)|
-| `data/processed/water_std.csv` | Données imputées et standardisées (pour Régression Logistique, MLP Classifier)|
+| `data/processed/water_imputed.csv` | Données imputées par la médiane — base d'entraînement des 4 modèles|
+| `data/processed/water_std.csv` | Version standardisée (référence EDA). En production, la standardisation requise par la Régression Logistique et le MLP est **intégrée à leur `Pipeline` scikit-learn**, donc appliquée à l'identique à l'entraînement et à l'inférence.|
 
 ### Architecture de la Stack Réseau
 
@@ -161,10 +161,67 @@ Une couche de règles métiers strictes est exécutée en amont de l'inférence.
 * Chloramines > 4.0 mg/L
 * Trihalométhanes > 80 ppm
 
-Le flux complet d'une requête de prédiction (authentification, garde-fous OMS, lazy loading du modèle, inférence et persistance) est détaillé ci-dessous :
+Au-delà du garde-fou, l'inférence interroge **les 4 modèles** et renvoie pour chacun sa prédiction et un **score de probabilité de potabilité** (`predict_proba`). Le verdict retenu est le **consensus** (vote majoritaire ; en cas d'égalité, principe de précaution → Non Potable). Deux voies alimentent ce flux :
+
+- **Saisie directe** : `POST /api/predict/all` (crée le prélèvement et le consensus).
+- **Fiche OCR** : `POST /api/ocr/lab-report` crée le prélèvement, puis `POST /api/predict/from-prelevement/{id}` enrichit **la même ligne** avec le consensus (pas de doublon).
 
 ![Flux d'une prédiction](img/flux_prediction.png)
 
+
+## API REST — endpoints & exemples d'appels
+
+Toutes les routes sont préfixées par `/api` et documentées via Swagger : http://127.0.0.1:8000/docs
+
+| Méthode | Route | Accès | Rôle |
+| --- | --- | --- | --- |
+| POST | `/api/clients` | Admin | Créer un client + générer sa clé API |
+| GET | `/api/clients` | Admin | Lister les clients |
+| POST | `/api/measurements` | Clé API | Déposer un prélèvement (saisie structurée) |
+| GET | `/api/measurements` | Clé API | Lister **ses** prélèvements (isolation RGPD) |
+| GET | `/api/measurements/admin` | Expert | Vue globale de tous les prélèvements |
+| POST | `/api/predict` | Clé API | Prédiction par **un** modèle ciblé |
+| POST | `/api/predict/all` | Clé API | Prédiction des **4 modèles** + consensus |
+| POST | `/api/predict/from-prelevement/{id}` | Clé API | Enrichit un prélèvement existant (ex. OCR) avec le consensus |
+| POST | `/api/ocr/lab-report` | Clé API | Ingestion d'une fiche labo (PDF/image) via OCR.space |
+| GET | `/health` | Public | État de l'API et modèles chargés |
+
+### Compte de test
+
+Aucun compte n'est préchargé : un administrateur crée d'abord un client, ce qui renvoie la clé API à réutiliser dans l'en-tête `X-API-Key`.
+
+```bash
+# 1. Créer un client (récupérer "api_key" dans la réponse)
+curl -X POST http://127.0.0.1:8000/api/clients/ \
+  -H "Content-Type: application/json" \
+  -d '{"client_id":"LAB_01","denomination":"Laboratoire Démo","adresse":"Marseille"}'
+
+# 2. Prédiction des 4 modèles (consensus) — remplacer wf_live_...
+curl -X POST http://127.0.0.1:8000/api/predict/all \
+  -H "X-API-Key: wf_live_..." -H "Content-Type: application/json" \
+  -d '{"ph":7.2,"Hardness":200,"Solids":15000,"Chloramines":3,"Sulfate":300,"Conductivity":400,"Organic_carbon":12,"Trihalomethanes":50,"Turbidity":2.5,"lieu":"Forage Nord"}'
+
+# 3. Ingestion OCR puis prédiction sur le prélèvement créé
+curl -X POST http://127.0.0.1:8000/api/ocr/lab-report \
+  -H "X-API-Key: wf_live_..." -F "file=@fiche_labo.pdf"
+# -> renvoie un "prelevement_id", puis :
+curl -X POST http://127.0.0.1:8000/api/predict/from-prelevement/<prelevement_id> \
+  -H "X-API-Key: wf_live_..."
+```
+
+## Interface web (Streamlit)
+
+L'IHM expose trois volets :
+1. **Analyse par curseurs** : saisie manuelle d'un échantillon, soumis aux 4 modèles avec verdict consensus et tableau comparatif.
+2. **Ingestion OCR** : téléversement d'une fiche labo ; extraction automatique puis prédiction enchaînée sur la ligne créée.
+3. **Consultation (Analyste Qualité)** : vue globale des prélèvements avec filtres par client, provenance (Saisie / OCR), date et résultat, et indicateurs (volumes, répartition potables / non potables).
+
+## Limites connues
+
+- **OCR partiel** : l'extraction par regex porte sur les 9 mesures physico-chimiques ; la `date` et les `observations` du document ne sont pas encore extraites (l'`ID client` provient de la clé API). Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée.
+- **Rôles experts simplifiés** : l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
+- **Métriques** : les accès sont journalisés dans `action_logs` (client, route, statut, durée) mais aucune métrique agrégée n'est exposée (endpoint `/metrics` ou Prometheus/Grafana en option).
+- **Monitoring exploitation** : le tableau de bord du responsable d'exploitation est hors socle (option de l'énoncé).
 
 ## Guide de lancement : Développement vs Production
 

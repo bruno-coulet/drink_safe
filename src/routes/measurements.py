@@ -30,6 +30,7 @@ class MeasurementCreate(BaseModel):
     Organic_carbon: float = Field(..., description="Carbone organique total en ppm")
     Trihalomethanes: float = Field(..., description="Concentration en trihalométhanes en ppm")
     Turbidity: float = Field(..., description="Turbidité de l'eau en NTU")
+    lieu: Optional[str] = Field(None, description="Lieu / point de prélèvement")
     observations: Optional[str] = Field(None, description="Remarques ou contexte du prélèvement")
 
 
@@ -49,18 +50,18 @@ def deposer_mesures(
     """
     query_insert: str = """
     INSERT INTO prelevements (
-        client_id, provenance, ph, hardness, solids, chloramines, 
-        sulfate, conductivity, organic_carbon, trihalomethanes, 
+        client_id, provenance, lieu, ph, hardness, solids, chloramines,
+        sulfate, conductivity, organic_carbon, trihalomethanes,
         turbidity, observations
-    ) VALUES (%s, 'Saisie', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+    ) VALUES (%s, 'Saisie', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
     """
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query_insert, (
-                    client_id, payload.ph, payload.Hardness, payload.Solids,
+                    client_id, payload.lieu, payload.ph, payload.Hardness, payload.Solids,
                     payload.Chloramines, payload.Sulfate, payload.Conductivity,
-                    payload.Organic_carbon, payload.Trihalomethanes, 
+                    payload.Organic_carbon, payload.Trihalomethanes,
                     payload.Turbidity, payload.observations
                 ))
                 conn.commit()

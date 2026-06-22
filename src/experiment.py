@@ -39,31 +39,27 @@ def executer_pipeline_mlops() -> None:
     print("[MLOps] Étape 1 : Initialisation des tables PostgreSQL...")
     init_db()
 
-    # 2. Chargement des jeux de données nettoyés
-    print("[MLOps] Étape 2 : Chargement des matrices de données...")
+    # 2. Chargement du jeu de données imputé (échelle brute)
+    print("[MLOps] Étape 2 : Chargement de la matrice de données...")
     path_brut = "data/processed/water_imputed.csv"
-    path_std = "data/processed/water_std.csv"
 
-    if not os.path.exists(path_brut) or not os.path.exists(path_std):
-        raise FileNotFoundError("Les fichiers de données dans 'data/processed/' sont introuvables.")
+    if not os.path.exists(path_brut):
+        raise FileNotFoundError("Le fichier 'data/processed/water_imputed.csv' est introuvable.")
 
     df_brut = pd.read_csv(path_brut)
-    df_std = pd.read_csv(path_std)
 
     # 3. Récupération des modèles depuis le catalogue centralisé
     modeles = get_models()
 
     for nom_modele, instance_modele in modeles.items():
-        # Sélection intelligente du dataset selon le besoin de standardisation du modèle
-        if nom_modele in ["LogisticRegression", "MLPClassifier"]:
-            df_travail = df_std
-            type_data = "Standardisées (Anti-leakage)"
-        else:
-            df_travail = df_brut
-            type_data = "Brutes / Imputées"
+        # Tous les modèles s'entraînent sur les données imputées (échelle brute).
+        # La standardisation requise par LogisticRegression et MLPClassifier est
+        # encapsulée dans leur Pipeline (StandardScaler), donc appliquée à l'identique
+        # à l'entraînement et à l'inférence.
+        type_data = "Imputées (standardisation intégrée au Pipeline si requise)"
 
-        X = df_travail.drop(columns=["Potability"], errors="ignore")
-        y = df_travail["Potability"]
+        X = df_brut.drop(columns=["Potability"], errors="ignore")
+        y = df_brut["Potability"]
 
         print(f"[MLOps] 🚀 Lancement du Run MLflow pour : {nom_modele} ({type_data})...")
 

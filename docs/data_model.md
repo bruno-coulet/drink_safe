@@ -24,6 +24,7 @@ erDiagram
         int id PK "SERIAL (Identifiant technique auto-incremente)"
         varchar client_id FK "Reference au proprietaire (clients.client_id)"
         varchar provenance "Vecteur d'ingestion (Saisie / OCR)"
+        varchar lieu "Lieu / point de prelevement"
         float ph "Potentiel Hydrogène"
         float hardness "Durete de l'eau (mg/L)"
         float solids "Solides totaux dissous (ppm)"
@@ -80,6 +81,7 @@ CREATE TABLE IF NOT EXISTS prelevements (
     id SERIAL PRIMARY KEY,
     client_id VARCHAR(50) REFERENCES clients(client_id),
     provenance VARCHAR(20) NOT NULL,
+    lieu VARCHAR(255),
     ph FLOAT, hardness FLOAT, solids FLOAT, chloramines FLOAT,
     sulfate FLOAT, conductivity FLOAT, organic_carbon FLOAT,
     trihalomethanes FLOAT, turbidity FLOAT,
