@@ -31,7 +31,7 @@ class Settings:
     IS_DOCKER: bool = os.path.exists("/.dockerenv")
 
     # --- Configuration Dynamique PostgreSQL ---
-    DB_HOST: str = "postgres-db" if IS_DOCKER else " 127.0.0.1"
+    DB_HOST: str = "postgres" if IS_DOCKER else " 127.0.0.1"
     DB_USER: str = "admin_waterflow"
     DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "MonMotDePasseSecurise123!")
     DB_NAME: str = "waterflow_db"
@@ -44,7 +44,7 @@ class Settings:
     DATABASE_URL: str = f"postgresql://{DB_USER.strip()}:{DB_PASSWORD.strip()}@{DB_HOST.strip()}:5432/{DB_NAME.strip()}"
 
     # --- Configuration Dynamique MLflow ---
-    MLFLOW_TRACKING_URI: str = "http://mlflow-back:5000" if IS_DOCKER else "http://127.0.0.1:5000"
+    MLFLOW_TRACKING_URI: str = "http://mlflow:5000" if IS_DOCKER else "http://127.0.0.1:5000"
 
 
 # Instanciation unique (Pattern Singleton)

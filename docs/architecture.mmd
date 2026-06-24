@@ -10,7 +10,7 @@ graph TD
         direction TB
         MW["Middleware HTTP<br/>Monitoring and Audit RGPD"]
         AUTH["Authentification<br/>par cle API  (X-API-Key)"]
-        subgraph ROUTERS["API Unique FastAPI  -  api-unique : Port 8000"]
+        subgraph ROUTERS["API Unique FastAPI  -  api : Port 8000"]
             direction LR
             R1["/api/clients<br/>Gestion des cles"]
             R2["/api/measurements<br/>Prelevements"]
@@ -27,7 +27,7 @@ graph TD
     subgraph DATA["COUCHE TRACKING and DONNEES  -  Conteneurs Docker"]
         direction TB
         MLFLOW["MLflow Tracking + Registry<br/>mlflow-back : Port 5000"]
-        PG[("PostgreSQL 16<br/>postgres-db : Port 5432<br/>Metier + Metadonnees MLflow")]
+        PG[("PostgreSQL 16<br/>postgres : Port 5432<br/>Metier + Metadonnees MLflow")]
         VOL[/"Volume partage local<br/>./mlruns_artifacts  (.pkl)"/]
         TRAIN["Pipeline entrainement<br/>mlops-training  (ephemere)<br/>4 modeles ML"]
     end

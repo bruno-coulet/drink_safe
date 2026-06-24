@@ -4,11 +4,67 @@ Pour répondre aux exigences industrielles du projet, la persistance des donnée
 1. **Le schéma de l'infrastructure MLOps** : Généré et géré de manière autonome par MLflow dans la base de données pour tracer les runs, paramètres, métriques et indexer les versions du Model Registry.
 2. **Le schéma Applicatif métier** : Conçu sur mesure, initialisé par `src/config.py`, et requêté par l'API Unique FastAPI pour stocker les clients, les prélèvements et auditer la sécurité (logs).
 
+`src.config.py.init_db()`
+Crée 3 tables applicatives au démarrage de l'API :
+- clients
+- prelevements
+- action_logs
+
+Backend Store (BDD) : MLflow structure nativement ses tables SQL dans la base waterflow_db
+MLflow (mlflow-back)
+Crée tout le reste automatiquement quand il démarre avec --backend-store-uri postgresql://.... Toutes les tables (experiments, runs, metrics, params, model_versions, endpoints, logged_models, guardrails, alembic_version…) sont le schéma interne de MLflow.
+
+La quantité de tables est élevée parce que le MLflow est intstallé sans version figée (`pip install mlflow`)
+Il prend la dernière version — probablement MLflow 2.15+ ou 2.16+ qui a ajouté beaucoup de tables pour des fonctionnalités récentes (model serving endpoardrails, tracing, budget policies…).
+
+Les fonctionnalités correspondantes ne sont pas utilisées dans le projet, mais MLflow crée les tables quand même via ses migrations Alembic (alembic_version = table de suivi des migrations).
+
+
+---
+
+|container_id|conatainer_name||
+|-|-|-|
+|03b326fa54b5|postgres|postgres:16-alpine|
+---
+POSTGRES_PASSWORD=MonMotDePasseSecurise123!
+
+POSTGRES_USER=admin_waterflow
+
+POSTGRES_DB=waterflow_db
+
+```bash
+# 1. Entrer dans le conteneur
+docker exec -it postgres bash
+# (ou sh si bash n'est pas installé)
+
+# 2. Lancer psql une fois à l'intérieur
+psql -U admin_waterflow -d waterflow_db
+
+# Liste toutes les tables de la base de données courante
+\dt
+# nom_de_la_table : Affiche la structure détaillée d'une table spécifique (les colonnes, leurs types, les PK/UK
+\d
+# Liste toutes les bases de données existantes
+\l
+# autre_base : Se connecter à une autre base de données
+\c
+# Active l'affichage étendu (très pratique si une table a beaucoup de colonnes et que le SELECT * devient illisible).
+\q
+# Quitter psql (et retourner au terminal normal)
+\x
+```
+
 ---
 
 ## 1. Modèle Logique de Données (MLD)
 
 Le dictionnaire de données métier s'articule autour de la traçabilité, du cloisonnement par entité cliente (RGPD), et du monitoring des performances de l'API.
+
+|acronyme|nom|rôle|
+|-|-|-|
+|PK|primary key|identifiant absolu et exclusif de chaque ligne dans une table|
+|UK|unique key|garantit que toutes les valeurs d'une colonne (ou d'un groupe de colonnes) sont strictement différentes les unes des autres. Il ne peut pas y avoir de doublons|
+
 
 ```mermaid
 erDiagram

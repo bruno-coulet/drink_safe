@@ -24,6 +24,7 @@ from src.routes.clients import router as clients_router
 from src.routes.measurements import router as measurements_router
 from src.routes.predictions import router as predictions_router
 from src.routes.ocr import router as ocr_router
+from src.routes.monitoring import router as monitoring_router
 
 # --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
 import requests
@@ -174,6 +175,7 @@ app.include_router(clients_router, prefix="/api")
 app.include_router(measurements_router, prefix="/api")
 app.include_router(predictions_router, prefix="/api")
 app.include_router(ocr_router, prefix="/api")
+app.include_router(monitoring_router, prefix="/api")
 
 
 @app.get("/health", tags=["Utility"])

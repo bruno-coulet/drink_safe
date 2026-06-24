@@ -17,12 +17,12 @@ graph TD
     end
 
     subgraph API [Couche Logicielle & Inférence - Docker]
-        FastAPI[API Unique FastAPI<br/>api-unique : Port 8000]
+        FastAPI[API Unique FastAPI<br/>api : Port 8000]
     end
 
     subgraph MLOps [Couche Tracking & Donnees - Docker]
-        MLflow[MLflow Tracking Server<br/>mlflow-back : Port 5000]
-        Postgres[(PostgreSQL 16<br/>postgres-db  Port 5432)]
+        MLflow[MLflow Tracking Server<br/>mlflow : Port 5000]
+        Postgres[(PostgreSQL 16<br/>postgres  Port 5432)]
         Vols[(Volume local partagé<br/>./mlruns_artifacts)]
     end
 

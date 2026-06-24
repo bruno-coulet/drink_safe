@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Supervision Métier — Analyste Qualité{% endblock %}
+
+{% block content %}
+<h2 class="mb-1">Supervision des prélèvements</h2>
+<p class="text-muted mb-4">Vue globale filtrée par client, provenance, résultat et période.</p>
+
+{% if erreur %}
+<div class="alert alert-danger">{{ erreur }}</div>
+{% endif %}
+
+<!-- KPI -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="card-title">{{ total }}</h3>
+                <p class="card-text text-muted mb-0">Prélèvements</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h3 class="card-title text-success">{{ potables }}</h3>
+                <p class="card-text text-muted mb-0">Potables</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h3 class="card-title text-danger">{{ non_potables }}</h3>
+                <p class="card-text text-muted mb-0">Non potables</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTRES -->
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Filtres</div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('analyste.dashboard') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Client</label>
+                    <select class="form-select" name="client_id">
+                        <option value="tous" {{ 'selected' if filtres.client_id == 'tous' }}>Tous</option>
+                        {% for cid in clients_ids %}
+                        <option value="{{ cid }}" {{ 'selected' if filtres.client_id == cid }}>{{ cid }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Provenance</label>
+                    <select class="form-select" name="provenance">
+                        <option value="toutes" {{ 'selected' if filtres.provenance == 'toutes' }}>Toutes</option>
+                        {% for prov in provenances %}
+                        <option value="{{ prov }}" {{ 'selected' if filtres.provenance == prov }}>{{ prov }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Résultat</label>
+                    <select class="form-select" name="resultat">
+                        {% for val in ['tous', 'Potable', 'Non Potable', 'Non analysé'] %}
+                        <option value="{{ val }}" {{ 'selected' if filtres.resultat == val }}>{{ val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Début</label>
+                    <input type="date" class="form-control" name="date_debut"
+                           value="{{ filtres.date_debut }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fin</label>
+                    <input type="date" class="form-control" name="date_fin"
+                           value="{{ filtres.date_fin }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-dark mt-3">Appliquer</button>
+            <a href="{{ url_for('analyste.dashboard') }}" class="btn btn-outline-secondary mt-3">Réinitialiser</a>
+        </form>
+    </div>
+</div>
+
+<!-- TABLE -->
+{% if donnees %}
+<div class="card">
+    <div class="card-header fw-semibold">Prélèvements ({{ donnees | length }})</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Client</th>
+                        <th>Provenance</th>
+                        <th>pH</th>
+                        <th>Turbidité</th>
+                        <th>Résultat</th>
+                        <th>Version modèle</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in donnees %}
+                    <tr>
+                        <td class="text-muted small">{{ d.id }}</td>
+                        <td>{{ d.client_id }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'info' if d.provenance == 'OCR' else 'secondary' }}">
+                                {{ d.provenance }}
+                            </span>
+                        </td>
+                        <td>{{ d.ph }}</td>
+                        <td>{{ d.turbidity }}</td>
+                        <td>
+                            {% if d.prediction_potability == 1 %}
+                            <span class="badge bg-success">Potable</span>
+                            {% elif d.prediction_potability == 0 %}
+                            <span class="badge bg-danger">Non Potable</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Non analysé</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ d.model_version or '—' }}</td>
+                        <td class="text-muted small">{{ d.cree_le[:16] if d.cree_le else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">Aucun prélèvement pour ces critères.</div>
+{% endif %}
+{% endblock %}

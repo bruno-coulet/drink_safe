@@ -9,7 +9,7 @@ graph TD
     subgraph APILAYER["LOGICIELLE and INFERENCE - Conteneur Docker"]
         direction TB
         MW["Middleware Monitoring/RGPD  +  Auth cle API (X-API-Key)"]
-        ROUTERS["API Unique FastAPI - api-unique : Port 8000<br/>/api/clients · /api/measurements<br/>/api/predict (garde-fous OMS) · /api/ocr"]
+        ROUTERS["API Unique FastAPI - api : Port 8000<br/>/api/clients · /api/measurements<br/>/api/predict (garde-fous OMS) · /api/ocr"]
         CACHE["Cache modeles RAM - ml_models (Lazy Loading)"]
         MW --> ROUTERS --> CACHE
     end
@@ -20,7 +20,7 @@ graph TD
         direction TB
         TRAIN["mlops-training (ephemere) - 4 modeles"]
         MLFLOW["MLflow Tracking + Registry - mlflow-back : Port 5000"]
-        PG[("PostgreSQL 16 - postgres-db : 5432<br/>Metier + Metadonnees MLflow")]
+        PG[("PostgreSQL 16 - postgres : 5432<br/>Metier + Metadonnees MLflow")]
         VOL[/"Volume ./mlruns_artifacts (.pkl)"/]
         TRAIN --> MLFLOW
     end

@@ -1,8 +1,8 @@
 services:
   # 1. BASE DE DONNÉES POSTGRESQL
-  postgres-db:
+  postgres:
     image: postgres:16-alpine
-    container_name: postgres-db
+    container_name: postgres
     ports:
       - "5432:5432"
     environment:
@@ -19,9 +19,9 @@ services:
     restart: unless-stopped
 
   # 2. SERVEUR DE TRACKING MLOPS MLFLOW
-  mlflow-back:
+  mlflow:
     image: python:3.12-slim
-    container_name: mlflow-back
+    container_name: mlflow
     ports:
       - "5000:5000"
     environment:
@@ -30,32 +30,32 @@ services:
       - UVICORN_PROXY_HEADERS=true
       - UVICORN_FORWARDED_ALLOW_IPS=*
     depends_on:
-      postgres-db:
+      postgres:
         condition: service_healthy
     volumes:
       - ./mlruns_artifacts:/app/artifacts
     restart: unless-stopped
-    command: sh -c "pip install --no-cache-dir mlflow psycopg2-binary && mlflow server --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
+    command: sh -c "pip install --no-cache-dir mlflow psycopg2-binary && mlflow server --backend-store-uri postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres:5432/waterflow_db --default-artifact-root /app/artifacts --host 0.0.0.0 --port 5000"
 
   # 3. API UNIQUE FASTAPI (Data + Model + OCR)
-  api-unique:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: api-unique
+    container_name: api
     ports:
       - "8000:8000"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
+      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres:5432/waterflow_db
       # En visant l'adresse IP 127.0.0.1 ou localhost mapée sur le port de la machine hôte, on contourne le DNS Rebinding
-      # - MLFLOW_TRACKING_URI=http://172.18.0.1:5000 
-      - MLFLOW_TRACKING_URI=http://mlflow-back:5000
+      # - MLFLOW_TRACKING_URI=http://172.18.0.1:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
       - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
     depends_on:
-      postgres-db:
+      postgres:
         condition: service_healthy
-      mlflow-back:
+      mlflow:
         condition: service_started
     volumes:
       - ./data:/app/data
@@ -72,12 +72,12 @@ services:
     container_name: mlops-training
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres-db:5432/waterflow_db
-      - MLFLOW_TRACKING_URI=http://mlflow-back:5000
+      - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres:5432/waterflow_db
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
-      postgres-db:
+      postgres:
         condition: service_healthy
-      mlflow-back:
+      mlflow:
         condition: service_started
     volumes:
       - ./data:/app/data

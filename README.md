@@ -50,7 +50,7 @@ Avec intégration WSL2 : settings/ressources/wsl integration
 - serveur MLflow
 - serveur API Unique
 ```bash
-docker compose up -d postgres-db mlflow-back api-unique
+docker compose up -d postegres mlflow api
 ```
 
 L'interface de suivi MLflow
@@ -63,8 +63,12 @@ http://127.0.0.1:8000/docs
 
 Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hôte local :
 
-```bash
+<!-- ```bash
 uv run streamlit run front/app.py
+``` -->
+
+```bash
+cd front && uv run python app.py
 ```
 
 Interface utilisateur
@@ -97,9 +101,9 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
 | --- | --- | --- | --- | --- |
 | **Interface UI** | Streamlit | 8501 | Hôte local (WSL2) | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
-| **API Unique** | FastAPI (`api-unique`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
-| **Registre MLOps** | MLflow (`mlflow-back`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
-| **Base de Données** | PostgreSQL 16 (`postgres-db`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
+| **API Unique** | FastAPI (`api`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
+| **Registre MLOps** | MLflow (`mlflow`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
+| **Base de Données** | PostgreSQL 16 (`postegres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
 
 ---
 
@@ -110,12 +114,12 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds (`.pkl`), l'architecture sépare physiquement le stockage :
 
 * **Backend Store (BDD) :** MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
-* **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow-back`, `mlops-training` et `api-unique`.
+* **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow`, `mlops-training` et `api`.
 * **Préchargement et Lazy Loading :** Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
 
 ### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
-Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow-back:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
+Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
 
 ---
 
@@ -133,7 +137,7 @@ SECRET_KEY=UneCleDeSessionSecurisee
 
 Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
 
-1. Assurez-vous que l'infrastructure de base tourne (`postgres-db` et `mlflow-back`).
+1. Assurez-vous que l'infrastructure de base tourne (`postegres` et `mlflow`).
 2. Lancez le conteneur d'entraînement éphémère :
 
 ```bash
@@ -244,9 +248,9 @@ Utile si l'on modifie le code source (src/) pour voir les changements en temps r
 
 Pré-requis :
 - Demarer les services de données lancés avec Docker
-    - `docker compose up -d postgres-db mlflow-back`
+    - `docker compose up -d postegres mlflow-back`
 - Arrêter le conteneur API
-    - `docker compose stop api-unique`
+    - `docker compose stop api`
 
 ```shell
 uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload

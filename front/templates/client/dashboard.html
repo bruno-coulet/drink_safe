@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Portail Client — Waterflow 2{% endblock %}
+
+{% block content %}
+<h2 class="mb-1">Evaluation de la potabilité</h2>
+<p class="text-muted mb-4">Soumettez un prélèvement manuellement ou importez une fiche laboratoire.</p>
+
+{% if erreur %}
+<div class="alert alert-danger">{{ erreur }}</div>
+{% endif %}
+
+<!-- SECTION 1 : Prédiction manuelle -->
+<div class="card mb-4">
+    <div class="card-header fw-semibold">1. Analyse par saisie manuelle</div>
+    <div class="card-body">
+        <p class="text-muted small">L'échantillon est soumis aux 4 modèles. Le verdict est le consensus (vote majoritaire).</p>
+        <form method="POST" action="{{ url_for('client.predict') }}">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">pH
+                        <span class="text-muted small" id="ph-val">
+                            {{ form_values.ph if form_values else '7.2' }}
+                        </span>
+                    </label>
+                    <input type="range" class="form-range" name="ph"
+                           min="0" max="14" step="0.1"
+                           value="{{ form_values.ph if form_values else '7.2' }}"
+                           oninput="document.getElementById('ph-val').textContent = this.value">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Chloramines (ppm)
+                        <span class="text-muted small" id="chlor-val">
+                            {{ form_values.chloramines if form_values else '3.2' }}
+                        </span>
+                    </label>
+                    <input type="range" class="form-range" name="chloramines"
+                           min="0" max="15" step="0.1"
+                           value="{{ form_values.chloramines if form_values else '3.2' }}"
+                           oninput="document.getElementById('chlor-val').textContent = this.value">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Dureté (mg/L)</label>
+                    <input type="number" class="form-control" name="hardness" step="1"
+                           value="{{ form_values.hardness if form_values else '200' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Solides totaux (ppm)</label>
+                    <input type="number" class="form-control" name="solids" step="100"
+                           value="{{ form_values.solids if form_values else '20000' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Sulfates (mg/L)</label>
+                    <input type="number" class="form-control" name="sulfate" step="1"
+                           value="{{ form_values.sulfate if form_values else '330' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Conductivité (μS/cm)</label>
+                    <input type="number" class="form-control" name="conductivity" step="1"
+                           value="{{ form_values.conductivity if form_values else '420' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Carbone organique (ppm)
+                        <span class="text-muted small" id="cot-val">
+                            {{ form_values.organic_carbon if form_values else '14.2' }}
+                        </span>
+                    </label>
+                    <input type="range" class="form-range" name="organic_carbon"
+                           min="0" max="30" step="0.1"
+                           value="{{ form_values.organic_carbon if form_values else '14.2' }}"
+                           oninput="document.getElementById('cot-val').textContent = this.value">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Trihalométhanes (ppm)
+                        <span class="text-muted small" id="thm-val">
+                            {{ form_values.trihalomethanes if form_values else '66.3' }}
+                        </span>
+                    </label>
+                    <input type="range" class="form-range" name="trihalomethanes"
+                           min="0" max="130" step="0.1"
+                           value="{{ form_values.trihalomethanes if form_values else '66.3' }}"
+                           oninput="document.getElementById('thm-val').textContent = this.value">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Turbidité (NTU)
+                        <span class="text-muted small" id="turb-val">
+                            {{ form_values.turbidity if form_values else '3.8' }}
+                        </span>
+                    </label>
+                    <input type="range" class="form-range" name="turbidity"
+                           min="0" max="7" step="0.1"
+                           value="{{ form_values.turbidity if form_values else '3.8' }}"
+                           oninput="document.getElementById('turb-val').textContent = this.value">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-dark mt-3">Lancer l'analyse</button>
+        </form>
+    </div>
+</div>
+
+<!-- RÉSULTAT PRÉDICTION -->
+{% if resultat %}
+<div class="card mb-4 border-{{ 'success' if resultat.prediction_consensus == 1 else 'danger' }}">
+    <div class="card-header fw-semibold
+        bg-{{ 'success' if resultat.prediction_consensus == 1 else 'danger' }} text-white">
+        {% if resultat.decision_reason %}
+            Rejet sanitaire OMS — {{ resultat.status_consensus }}
+        {% else %}
+            Consensus : {{ resultat.status_consensus }}
+            ({{ resultat.votes_potable }}/{{ resultat.votes_total }} modèles)
+        {% endif %}
+    </div>
+    {% if resultat.decision_reason %}
+    <div class="card-body">
+        <p class="mb-0">{{ resultat.decision_reason }}</p>
+    </div>
+    {% elif resultat.details %}
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Modèle</th>
+                    <th>Prédiction</th>
+                    <th>Score potabilité</th>
+                    <th>Version</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in resultat.details %}
+                <tr>
+                    <td>{{ d.model }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if d.status == 'Potable' else 'danger' }}">
+                            {{ d.status }}
+                        </span>
+                    </td>
+                    <td>{{ d.score_potabilite }}</td>
+                    <td class="text-muted small">{{ d.model_version }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- SECTION 2 : OCR -->
+<div class="card mb-4">
+    <div class="card-header fw-semibold">2. Ingestion par fiche laboratoire (OCR)</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('client.ocr') }}" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Fiche d'analyse (PDF, PNG, JPG)</label>
+                <input type="file" class="form-control" name="fichier"
+                       accept=".pdf,.png,.jpg,.jpeg" required>
+            </div>
+            <button type="submit" class="btn btn-outline-dark">Extraire et analyser</button>
+        </form>
+    </div>
+</div>
+
+<!-- RÉSULTAT OCR -->
+{% if resultat_ocr %}
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info text-white fw-semibold">
+        Extraction OCR réussie — ID prélèvement : {{ resultat_ocr.prelevement_id }}
+    </div>
+    <div class="card-body">
+        <pre class="mb-0 small">{{ resultat_ocr.extracted_data | tojson(indent=2) }}</pre>
+    </div>
+</div>
+{% if resultat_pred %}
+<div class="card mb-4 border-{{ 'success' if resultat_pred.prediction_consensus == 1 else 'danger' }}">
+    <div class="card-header fw-semibold
+        bg-{{ 'success' if resultat_pred.prediction_consensus == 1 else 'danger' }} text-white">
+        Analyse OCR — {{ resultat_pred.status_consensus }}
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr><th>Modèle</th><th>Prédiction</th><th>Score</th></tr>
+            </thead>
+            <tbody>
+                {% for d in resultat_pred.details %}
+                <tr>
+                    <td>{{ d.model }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if d.status == 'Potable' else 'danger' }}">
+                            {{ d.status }}
+                        </span>
+                    </td>
+                    <td>{{ d.score_potabilite }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% endblock %}

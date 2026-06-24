@@ -1,0 +1,33 @@
+body {
+    background-color: #708dab;
+    background-image: url("/static/img/eau.webp"), alt("eau");
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.navbar-brand {
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+.font-monospace {
+    font-size: 0.82rem;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.88rem;
+}
+
+/* Met en évidence les durées anormalement longues */
+.table-danger td, .table-warning td {
+    font-size: 0.88rem;
+}
