@@ -13,6 +13,23 @@ body {
     border-radius: 0.5rem;
 }
 
+.card-body {
+    background-color: #23465f;
+}
+
+.text-muted{
+/* color: #c8c8c8!important; */
+color: floralwhite!important;
+}
+
+h2.mb-1{
+    color: floralwhite;
+}
+.form-label{
+color: #71a6d5;
+}
+
+
 .font-monospace {
     font-size: 0.82rem;
 }

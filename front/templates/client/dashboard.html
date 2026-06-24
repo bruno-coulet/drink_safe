@@ -19,39 +19,39 @@
                 <div class="col-md-6">
                     <label class="form-label">pH
                         <span class="text-muted small" id="ph-val">
-                            {{ form_values.ph if form_values else '7.2' }}
+                            {{ form_values.ph if form_values else '7.04' }}
                         </span>
                     </label>
                     <input type="range" class="form-range" name="ph"
                            min="0" max="14" step="0.1"
-                           value="{{ form_values.ph if form_values else '7.2' }}"
+                           value="{{ form_values.ph if form_values else '7.04' }}"
                            oninput="document.getElementById('ph-val').textContent = this.value">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Chloramines (ppm)
                         <span class="text-muted small" id="chlor-val">
-                            {{ form_values.chloramines if form_values else '3.2' }}
+                            {{ form_values.chloramines if form_values else '2.58' }}
                         </span>
                     </label>
                     <input type="range" class="form-range" name="chloramines"
                            min="0" max="15" step="0.1"
-                           value="{{ form_values.chloramines if form_values else '3.2' }}"
+                           value="{{ form_values.chloramines if form_values else '2.58' }}"
                            oninput="document.getElementById('chlor-val').textContent = this.value">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Dureté (mg/L)</label>
                     <input type="number" class="form-control" name="hardness" step="1"
-                           value="{{ form_values.hardness if form_values else '200' }}">
+                           value="{{ form_values.hardness if form_values else '155.68' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Solides totaux (ppm)</label>
                     <input type="number" class="form-control" name="solids" step="100"
-                           value="{{ form_values.solids if form_values else '20000' }}">
+                           value="{{ form_values.solids if form_values else '52060.23' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Sulfates (mg/L)</label>
                     <input type="number" class="form-control" name="sulfate" step="1"
-                           value="{{ form_values.sulfate if form_values else '330' }}">
+                           value="{{ form_values.sulfate if form_values else '365.08' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Conductivité (μS/cm)</label>
@@ -61,34 +61,34 @@
                 <div class="col-md-4">
                     <label class="form-label">Carbone organique (ppm)
                         <span class="text-muted small" id="cot-val">
-                            {{ form_values.organic_carbon if form_values else '14.2' }}
+                            {{ form_values.organic_carbon if form_values else '14.17' }}
                         </span>
                     </label>
                     <input type="range" class="form-range" name="organic_carbon"
                            min="0" max="30" step="0.1"
-                           value="{{ form_values.organic_carbon if form_values else '14.2' }}"
+                           value="{{ form_values.organic_carbon if form_values else '14.17' }}"
                            oninput="document.getElementById('cot-val').textContent = this.value">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Trihalométhanes (ppm)
                         <span class="text-muted small" id="thm-val">
-                            {{ form_values.trihalomethanes if form_values else '66.3' }}
+                            {{ form_values.trihalomethanes if form_values else '48.25' }}
                         </span>
                     </label>
                     <input type="range" class="form-range" name="trihalomethanes"
                            min="0" max="130" step="0.1"
-                           value="{{ form_values.trihalomethanes if form_values else '66.3' }}"
+                           value="{{ form_values.trihalomethanes if form_values else '48.25' }}"
                            oninput="document.getElementById('thm-val').textContent = this.value">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Turbidité (NTU)
                         <span class="text-muted small" id="turb-val">
-                            {{ form_values.turbidity if form_values else '3.8' }}
+                            {{ form_values.turbidity if form_values else '2.00' }}
                         </span>
                     </label>
                     <input type="range" class="form-range" name="turbidity"
                            min="0" max="7" step="0.1"
-                           value="{{ form_values.turbidity if form_values else '3.8' }}"
+                           value="{{ form_values.turbidity if form_values else '2.00' }}"
                            oninput="document.getElementById('turb-val').textContent = this.value">
                 </div>
             </div>

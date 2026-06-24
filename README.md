@@ -50,7 +50,7 @@ Avec intégration WSL2 : settings/ressources/wsl integration
 - serveur MLflow
 - serveur API Unique
 ```bash
-docker compose up -d postegres mlflow api
+docker compose up -d postgres mlflow api
 ```
 
 L'interface de suivi MLflow
@@ -133,16 +133,38 @@ OCR_SPACE_API_KEY=VotreCleApiOcrSpace
 SECRET_KEY=UneCleDeSessionSecurisee
 ```
 
-### Scénario : Entraînement Initial (MLOps Pipeline)
+### Scénari
+
+#### Entraînement Initial (MLOps Pipeline)
 
 Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
 
-1. Assurez-vous que l'infrastructure de base tourne (`postegres` et `mlflow`).
+1. Vérifier que l'infrastructure de base tourne (`postegres` et `mlflow`).
 2. Lancez le conteneur d'entraînement éphémère :
 
 ```bash
 docker compose up mlops-training
 ```
+---
+
+#### Relancer le pipeline d'entraînement
+ générer les nouvelles versions des modèles dans MLflow :
+```bash
+docker compose up -d --build mlops-training
+
+# suivre l'entrainement
+docker logs -f mlops-training
+```
+Le conteneur va s'exécuter, ré-entraîner les 4 modèles, enregistrer les nouveaux .pkl dans le volume partagé, et s'arrêter proprement
+
+Il faut ensuite mettre à jour l'API
+"Lazy Loading" : l'API garde les modèles en cache (RAM) après la première prédiction.
+Pour la forcer à télécharger les nouveaux modèles, il faut vider le cache en la redémarrant :
+```bash
+docker restart api
+```
+
+---
 
 *Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.*
 

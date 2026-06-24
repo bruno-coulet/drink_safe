@@ -29,12 +29,14 @@ def get_models() -> dict[str, Any]:
         "LogisticRegression": Pipeline([
             ("scaler", StandardScaler()),
             ("model", LogisticRegression(
+                class_weight='balanced',
                 max_iter=1000,
                 random_state=RANDOM_STATE
             )),
         ]),
 
         "RandomForestClassifier": RandomForestClassifier(
+            class_weight='balanced',
             n_estimators=200,
             max_depth=10,
             min_samples_split=5,
@@ -56,7 +58,9 @@ def get_models() -> dict[str, Any]:
             ("scaler", StandardScaler()),
             ("model", MLPClassifier(
                 hidden_layer_sizes=(100, 50),
-                max_iter=500,
+                max_iter=1500,
+                early_stopping=True,
+                n_iter_no_change=15,   
                 activation="relu",
                 solver="adam",
                 random_state=RANDOM_STATE
