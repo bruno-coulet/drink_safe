@@ -33,7 +33,7 @@ _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
 def patched_prepare_headers(self, headers):
     _old_prepare_headers(self, headers)
     # On écrase l'en-tête Host UNIQUEMENT si la cible est le conteneur MLflow
-    if self.url and "mlflow-back" in self.url:
+    if self.url and "mlflow" in self.url:
         self.headers["Host"] = "localhost:5000"
 
 requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
