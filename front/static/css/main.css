@@ -22,11 +22,17 @@ body {
 color: floralwhite!important;
 }
 
-h2.mb-1{
+h2.mb-1, .mb-0{
     color: floralwhite;
 }
+
 .form-label{
 color: #71a6d5;
+}
+
+/* OCR */
+.bg-info {
+    background-color: rgb(35 70 95)!important;
 }
 
 

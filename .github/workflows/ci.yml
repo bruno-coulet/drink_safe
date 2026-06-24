@@ -17,17 +17,17 @@ jobs:
     steps:
       # Étape A : Le robot télécharge ton code source
       - name: Récupération du code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       # Étape B : Il installe le gestionnaire de paquets ultra-rapide 'uv'
       - name: Installation de uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
 
       # Étape C : Il installe Python 3.12
       - name: Configuration de Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
 
@@ -36,7 +36,7 @@ jobs:
         run: uv sync --frozen
 
       # Étape E : Il recrée ton environnement avec de fausses variables pour les tests
-      - name: 🔐 Création de l'environnement de Test (.env)
+      - name:  Création de l'environnement de Test (.env)
         shell: bash
         run: |
           echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
