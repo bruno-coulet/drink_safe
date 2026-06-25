@@ -31,6 +31,9 @@ Le jeu de données contient :
 - 9 mesures physico-chimiques de la qualité de l'eau (features)
 - une étiquette binaire (1 = potable, 0 = non potable)
 
+recall sur la classe non-potable est la métrique métier prioritaire ici : minimiser les cm_fp.   
+ sklearn calcule le recall sur la classe positive (1 = Potable) par défaut, ce qui ne correspond pas à cet objectif.
+
 
 Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que [son descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
 

@@ -1,5 +1,14 @@
 name: Waterflow 2 CI
 
+
+# Actuellement, la CI entraîne les modèles à la volée car le dataset est léger (3276 lignes)
+# et le serveur MLflow est conteneurisé localement.
+# Si nous devions passer à l'échelle sur des millions de lignes, je ferais évoluer l'architecture :
+# je déploierais le serveur MLflow et le stockage des artefacts (S3) sur le Cloud.
+# La CI logicielle cesserait d'entraîner et se contenterait de télécharger le modèle distant pour ses tests,
+# tandis que l'entraînement ferait l'objet d'un pipeline asynchrone distinct (Continuous Training).
+
+
 # 1. QUAND DÉCLENCHER LE ROBOT ?
 # À chaque 'push' ou 'pull request' sur n'importe quelle branche
 on:
@@ -49,8 +58,15 @@ jobs:
         run: |
           docker compose up -d postgres mlflow
           echo "Attente de 15s pour l'initialisation de MLflow..."
-          sleep 30
+          sleep 15
+
+          echo "Entraînement des modèles MLOps (requis pour les tests de non-régression)..."
+          docker compose up mlops-training
+
+          echo "Lancement de l'API..."
           docker compose up -d api
+          sleep 10
+
       # Étape G : L'épreuve finale, il lance tes tests
       - name: Exécution des tests (PyTest)
         run: uv run pytest -v

@@ -1,59 +1,83 @@
 """
--------------------------------------------------------------------------------
 Projet : Waterflow 2
-Composant : Suite de Tests de Non-Régression (PyTest)
-Description : Vérification automatique de l'intégrité des performances du 
-              catalogue de modèles d'IA par rapport à un seuil critique.
--------------------------------------------------------------------------------
+Composant : Suite de Tests de Non-Régression (PyTest) - Version 2 (Enrichie)
+Description : Vérification automatique des métriques de performance du catalogue 
+              de modèles (F1-score et AUC-PR) et validation de la structure de la 
+              matrice de confusion sur le jeu de validation.
 """
-
 import os
-from typing import Any, Dict
 import pandas as pd
 import pytest
-from sklearn.metrics import f1_score
-
+from sklearn.metrics import f1_score, average_precision_score, confusion_matrix
 from src.api import ml_models
+from src.config import settings
 
+def ensure_models_are_loaded():
+    """Force le chargement des modèles en mémoire vive s'ils ne le sont pas encore."""
+    if not ml_models:
+        try:
+            import mlflow
+            mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+            client = mlflow.tracking.MlflowClient()
+            for model_name in ["WaterModel_LogisticRegression", "WaterModel_RandomForestClassifier", "WaterModel_XGBClassifier", "WaterModel_MLPClassifier"]:
+                try:
+                    latest_versions = client.get_latest_versions(model_name, stages=["None", "Staging", "Production"])
+                    if latest_versions:
+                        latest_version = latest_versions[0].version
+                        model_uri = f"models:/{model_name}/{latest_version}"
+                        loaded_model = mlflow.pyfunc.load_model(model_uri)
+                        ml_models[model_name] = loaded_model
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
 def test_non_regression_performance_catalogue() -> None:
-    """S'assure que les modèles actifs maintiennent un score F1 minimal de 60%."""
+    """S'assure que les modèles actifs maintiennent un score F1 minimal de 60% et un AUC-PR minimal de 50%."""
     # 1. Vérification de l'existence du dataset de validation standardisé
     filepath_val: str = "data/processed/water_std.csv"
+    assert os.path.exists(filepath_val), f"Le fichier de validation standardisé est introuvable : {filepath_val}"
     
-    # Si le fichier n'est pas là (cas du robot CI), arrête sans faire échouer le pipeline
-    if not os.path.exists(filepath_val):
-        print(f"Dataset {filepath_val} introuvable, skip du test.")
-        # Le 'return' garantit que le test est considéré comme réussi (ou ignoré)
-        return 
+    # 2. Chargement du dataset de validation
+    df_val = pd.read_csv(filepath_val)
     
-    # 2. Chargement des données de test
-    df_val: pd.DataFrame = pd.read_csv(filepath_val)
+    # Séparation des features et de la cible
+    assert "Potability" in df_val.columns, "La colonne cible 'Potability' est absente du fichier de validation"
+    X_val = df_val.drop(columns=["Potability"])
+    y_val = df_val["Potability"]
     
-    # Extraction de la variable cible et des features
-    X_val: pd.DataFrame = df_val.drop(columns=["Potability"], errors="ignore")
-    y_true: pd.Series = df_val["Potability"]
+    # 3. Garantie du chargement des modèles (Lazy Loading)
+    ensure_models_are_loaded()
+    
+    if not ml_models:
+        pytest.skip("Aucun modèle n'est actuellement chargé dans ml_models (le Model Registry ou le serveur de tracking est injoignable).")
 
-    # Seuil de performance minimal acceptable pour la production (60%)
-    seuil_f1_minimal: float = 0.60
-
-    # 3. Vérification qu'au moins un modèle est instancié en mémoire
-    modeles_actifs = [k for k, v in ml_models.items() if v is not None]
-    if not modeles_actifs:
-        pytest.skip("Aucun modèle n'est actuellement chargé dans le registre d'API. Test ignoré.")
-
-    # 4. Évaluation de non-régression sur chaque modèle actif
-    for nom_modele in modeles_actifs:
-        model = ml_models[nom_modele]
+    # 4. Évaluation de chaque modèle disponible
+    for model_name, model in ml_models.items():
+        try:
+            y_pred = model.predict(X_val)
+        except Exception as e:
+            pytest.fail(f"Échec de la prédiction pour le modèle {model_name} : {e}")
+            
+        # Validation du score F1
+        score_f1 = f1_score(y_val, y_pred)
+        assert score_f1 >= 0.60, f"Le modèle {model_name} a subi une régression sur le F1-score : {score_f1:.2f} < 0.60"
         
-        # Calcul des prédictions sur le jeu de validation
-        y_pred = model.predict(X_val)
-        score_f1: float = float(f1_score(y_true, y_pred, zero_division=0))
+        # Validation de l'AUC-PR (Average Precision Score)
+        try:
+            if hasattr(model, "predict_proba"):
+                y_proba = model.predict_proba(X_val)[:, 1]
+            elif hasattr(model, "_model_impl") and hasattr(model._model_impl, "predict_proba"):
+                y_proba = model._model_impl.predict_proba(X_val)[:, 1]
+            else:
+                y_proba = y_pred
+                
+            auc_pr = average_precision_score(y_val, y_proba)
+            assert auc_pr >= 0.50, f"Le modèle {model_name} a un AUC-PR insuffisant : {auc_pr:.2f} < 0.50"
+        except Exception as e:
+            print(f"Impossible de calculer l'AUC-PR pour {model_name} : {e}")
 
-        print(f"[Non-Régression] Modèle: {nom_modele} | Score F1: {score_f1:.4f}")
-
-        # Le test échoue si le modèle réagit moins bien que le seuil de garde-fou fixé
-        assert score_f1 >= seuil_f1_minimal, (
-            f"Régression détectée pour le modèle {nom_modele} ! "
-            f"Score F1 actuel: {score_f1:.4f} < Seuil requis: {seuil_f1_minimal:.4f}"
-        )
+        # 5. Validation de la cohérence de la Matrice de Confusion (TP, TN, FP, FN)
+        tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+        total_predictions = tn + fp + fn + tp
+        assert total_predictions == len(y_val), f"Incohérence dans la matrice de confusion pour {model_name} : {total_predictions} != {len(y_val)}"

@@ -183,8 +183,11 @@ def executer_pipeline_mlops() -> None:
             # --- Matrice de confusion (test set) ---
             tn, fp, fn, tp = confusion_matrix(y_test, y_pred_test).ravel()
             mlflow.log_metrics({
-                "cm_tn": int(tn), "cm_fp": int(fp),
-                "cm_fn": int(fn), "cm_tp": int(tp),
+                "vrais_negatifs": int(tn),  # non-potable correct
+                "faux_positifs":  int(fp),  # non-potable déclaré potable (risque sanitaire)
+                "faux_negatifs":  int(fn),  # potable déclaré non-potable (gaspillage)
+                "vrais_positifs": int(tp),  # potable correct
+                "test_recall_non_potable": round(float(recall_score(y_test, y_pred_test, pos_label=0, zero_division=0)), 4),
             })
 
             nom_registre = f"WaterModel_{nom_modele}"
