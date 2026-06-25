@@ -77,6 +77,20 @@
 │   └── routage.svg
 ├── mlruns_artifacts
 │   └── 1
+│       ├── 04bb48b0729a41e281c3b7280a8dcf92
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
 │       ├── 055bc9a4e9a041b0a248af8e06a25042
 │       │   └── artifacts
 │       │       └── model
@@ -118,6 +132,20 @@
 │       │           ├── python_env.yaml
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
+│       ├── 2d318003531a40feb25375950dfb970b
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
 │       ├── 305ce7503a2b441180b77b2b7d2484e2
 │       │   └── artifacts
 │       │       └── model
@@ -132,6 +160,20 @@
 │       │           ├── python_env.yaml
 │       │           └── requirements.txt
 │       ├── 3324fcd685a34a269ce16713cf7f5761
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 36992c8fcdfa4fd48449d494ae67e760
 │       │   └── artifacts
 │       │       └── model
 │       │           ├── MLmodel
@@ -243,7 +285,47 @@
 │       │           ├── python_env.yaml
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
+│       ├── 829fae4e3224414bbc3d7ac72c992434
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 85570e2ae14b4683b34a5b98767bbed2
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
 │       ├── 8724118342ec4bbdaf3ca8017e5aaa39
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
+│       ├── a3ac0641367447978218e71d4798515a
 │       │   └── artifacts
 │       │       └── model
 │       │           ├── MLmodel
@@ -298,6 +380,19 @@
 │       │           ├── python_env.yaml
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
+│       ├── b0afb82e813842229165ae2f681ac4ec
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           └── requirements.txt
 │       ├── e21ca56577734a4fa944e5e9a75ce981
 │       │   └── artifacts
 │       │       └── model
@@ -325,6 +420,19 @@
 │       │           ├── model.pkl
 │       │           ├── python_env.yaml
 │       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── f545ba45611f4f22a7543b317f8180b3
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
 │       │           └── requirements.txt
 │       ├── f936741bd6e44438b4679504030f7208
 │       │   └── artifacts
@@ -358,6 +466,8 @@
 │   └── eda.ipynb
 ├── pyproject.toml
 ├── scripts
+│   ├── hash_admin_passwords.py
+│   ├── migrate_keys_to_hash.py
 │   └── seed_admins.py
 ├── src
 │   ├── __pycache__
@@ -387,6 +497,7 @@
 │   │   ├── __pycache__
 │   │   │   ├── clients.cpython-312.pyc
 │   │   │   ├── measurements.cpython-312.pyc
+│   │   │   ├── monitoring.cpython-312.pyc
 │   │   │   ├── ocr.cpython-312.pyc
 │   │   │   └── predictions.cpython-312.pyc
 │   │   ├── clients.py
@@ -420,4 +531,4 @@
     ├── requires.txt
     └── top_level.txt
 
-118 directories, 303 files
+150 directories, 382 files

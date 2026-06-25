@@ -63,16 +63,13 @@ http://127.0.0.1:8000/docs
 
 Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hôte local :
 
-<!-- ```bash
-uv run streamlit run front/app.py
-``` -->
 
 ```bash
 cd front && uv run python app.py
 ```
 
 Interface utilisateur
-http://localhost:8501
+http://127.0.0.1:5001
 
 ---
 

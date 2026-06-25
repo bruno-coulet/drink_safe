@@ -1,90 +1,143 @@
-# Architecture Technique (Waterflow 2)
+# Architecture Technique - Waterflow 2
+- choix de conception
+- unification des conteneurs sous des dénominations standardisées
+- mécanismes de communication réseau et de persistance des données.
 
-## Les choix techniques importants
-- Frameworks & architecture : API Unique (FastAPI) unifiant Data, Inférence et OCR.
-- Structure modulaire via les routeurs (`APIRouter`).
-- Gestion de la clé API & Sécurité Réseau.
-- Stratégie MLOps de Lazy Loading & Volume Partagé.
+## 1. Les Choix Techniques Majeurs
+L'industrialisation de Waterflow 2 repose sur une simplification drastique de la stack réseau tout en garantissant des performances élevées et une maintenabilité optimale.
 
----
+### API Unique Modulaire (FastAPI)
 
-## Schéma global de l'architecture
+- Unification de :
+    - la gestion des données
+    - l'inférence des modèles
+    - l'ingestion OCR
+sous un seul conteneur backend.
 
-```mermaid
-graph TD
-    subgraph Presentation [Couche Presentation - Hote local]
-        UI[IHM Streamlit<br/>Port 8501]
-    end
+- Modularité par Routeurs (APIRouter) :
+Segmentation sémantique et logique du code sans introduire la complexité d'une architecture microservices.
 
-    subgraph API [Couche Logicielle & Inférence - Docker]
-        FastAPI[API Unique FastAPI<br/>api : Port 8000]
-    end
+- Stratégie MLOps de Lazy Loading :
+Chargement dynamique des modèles à la volée avec mise en cache RAM pour éviter les blocages au démarrage (Cold Start).
 
-    subgraph MLOps [Couche Tracking & Donnees - Docker]
-        MLflow[MLflow Tracking Server<br/>mlflow : Port 5000]
-        Postgres[(PostgreSQL 16<br/>postgres  Port 5432)]
-        Vols[(Volume local partagé<br/>./mlruns_artifacts)]
-    end
+- Conteneurisation Standardisée :
+Orchestration de la stack via Docker Compose avec des services aux noms simplifiés (postgres, mlflow, api, mlops-training).
 
-    %% Flux et connexions
-    UI -->|1. Requêtes API Clé Auth| FastAPI
-    FastAPI -->|2. Persiste clients, prélèvements et logs| Postgres
-    FastAPI -->|3. OCR & Business Rules| FastAPI
-    FastAPI -->|4. Interroge le Registre Métadonnées| MLflow
-    MLflow -->|5. Backend Store SQL| Postgres
-    MLflow -->|6. Artifact Store| Vols
-    FastAPI -.->|7. Lazy Loading des modèles .pkl| Vols
-```
+- IHM de Présentation (Flask) :
+Transition d'un prototype Streamlit vers une application Flask multi-profils (Port 5001) exécutée sur la machine hôte.
+
+## 2. Architecture Globale et Flux Réseau
+La stack logicielle est segmentée en couches distinctes communiquant par requêtes HTTP sécurisées ou via le réseau virtuel isolé de Docker :
+
+                  [ MACHINE HÔTE (Windows / WSL2) ]
+                                  │
+                       ┌──────────┴──────────┐
+                       │   Frontend FLASK    │ (Port 5001)
+                       │ (Client/Analyste)   │
+                       └──────────┬──────────┘
+                                  │ (Appels HTTP via localhost:8000)
+                                  ▼
+                     [ RÉSEAU ISOLE DOCKER ]
+                                  │
+            ┌─────────────────────┼─────────────────────┐
+            │                     ▼                     │
+            │          ┌─────────────────────┐          │
+            │          │    API Unique       │ (Port 8000 / api)
+            │          │    (FastAPI)        │
+            │          └────┬───────────┬────┘          │
+            │               │           │               │
+            │      (SQL)    ▼           ▼ (Appels HTTP Internes)
+            │  ┌──────────────┐       ┌──────────────┐  │
+            │  │  Base SQL    │       │   Serveur    │  │ (Port 5000 / mlflow)
+            │  │ (PostgreSQL) │       │   MLflow     │  │
+            │  └──────────────┘       └──────┬───────┘  │
+            │   (Port 5432 /                 │          │
+            │    postgres)                   │ (Volume) │
+            │                                ▼          │
+            │                       ┌────────────────┐  │
+            │                       │ Volume Partagé │  │ (./mlruns_artifacts)
+            │                       │  (.pkl / ML)   │  │
+            │                       └────────────────┘  │
+            └───────────────────────────────────────────┘
+Unification de la Nomenclature des Services
+Afin de rendre l'infrastructure hautement lisible et d'éliminer les conflits de configuration, tous les conteneurs ont été renommés :
+
+- api : Port 8000
+    Expose la logique métier (data, predict, ocr).
+
+- mlflow : Port 5000
+    Gère le tracking et le Model Registry.
+
+- postgres : Port 5432
+    Assure la persistance relationnelle globale.
+
+- mlops-training
+    Pipeline éphémère d'entraînement et d'équilibrage des modèles.
+
+## 3. Modularité de l'API FastAPI
+Pour éviter un "surcoût" (overhead) de communication et la complexité de déploiement de multiples microservices, l'API unique consolide les modules dans des fichiers de routes isolés ``src/routes/`` :
+
+``clients.py`` : Création et gestion des comptes clients, génération sécurisée des clés API (en-tête X-API-Key)
+
+``measurements.py`` : Route d'ingestion des prélèvements structurés et de consultation (avec isolation stricte par clé API pour la conformité RGPD)
+
+``predictions.py`` : Application des Garde-fous OMS en amont et orchestration de l'inférence par vote majoritaire (consensus) sur les 4 modèles
+
+``ocr.py`` : Réception des documents non structurés, transmission sécurisée au service externe OCR.space, parsing des regex et création automatique du prélèvement structuré
+
+``monitoring.py`` : Journalisation d'audit, monitoring des temps de réponse et des statuts HTTP pour l'auditeur d'exploitation.
+
+## 4. Stratégie MLOps & Lazy Loading
+Découplage des Métadonnées et des Artefacts
+Pour préserver les performances de la base PostgreSQL, l'architecture sépare les données :
+
+**Backend Store :**
+
+PostgreSQL Gère
+- l'historique des expériences
+- les métriques d'entraînement
+- les cycles de vie des versions
 
 
----
+**Artifact Store :**
 
-### Les choix techniques justifiés
+Un volume Docker local ``./mlruns_artifacts`` stocke physiquement les modèles sérialisés ``model.pkl``
+Ce dossier est monté en lecture-écriture sur les conteneurs ``mlflow``, ``api`` et ``mlops-training``
 
-#### 1. L'API Unique (Architecture Monolithique Modulaire)
 
-Contrairement au prototype Waterflow 1 (qui séparait Flask et FastAPI), Waterflow 2 consolide toute la logique backend dans un conteneur unique **FastAPI (Port 8000)**.
-**Justification :** - Réduction de la complexité réseau (pas d'appels inter-services inutiles).
+**Mécanisme de Lazy Loading :**
 
-* Maintenance centralisée et documentation unifiée (Swagger auto-généré).
-* FastAPI offre des performances asynchrones natives, idéales pour l'attente de l'OCR et le chargement des modèles.
+L'API FastAPI ne charge pas les modèles ML en mémoire vive lors de son initialisation.
 
-#### 2. Structure de l'API & Modularité
+Ce fonctionnement évite les plantages au démarrage si le serveur MLflow est indisponible (Cold Start)
 
-L'utilisation des **APIRouter** permet de segmenter le code sans créer de microservices lourds. L'application est divisée dans `src/routes/` :
+Lors de la première requête de prédiction, l'API :
+- interroge le registre MLflow à la volée.
+- télécharge le binaire requis depuis le volume partagé ``./mlruns_artifacts``
+- Le modèle est instancié puis stocké dans un cache RAM local.
 
-* `clients.py` : Création et gestion des clés API.
-* `measurements.py` : API Data (dépôt et consultation des prélèvements filtrés par client).
-* `predictions.py` : API Model (Inférence IA et garde-fous OMS).
-* `ocr.py` : API OCR (Ingestion des fiches labo).
+Les requêtes suivantes consomment directement le modèle en cache avec un temps de réponse inférieur à 5ms.
 
-#### 3. Architecture MLOps et Lazy Loading
+## 5. Parade contre le DNS Rebinding (Erreur 403)
+Au sein d'un réseau Docker isolé, les serveurs d'application HTTP (comme Uvicorn) bloquent par sécurité les requêtes qui contiennent des en-têtes d'hôtes virtuels internes (ex: Host: mlflow:5000). Ce mécanisme de protection contre le DNS Rebinding renvoie une erreur 403 (Forbidden).
 
-Pour résoudre les problèmes de désynchronisation au démarrage (Cold Start) et de dépendance forte à MLflow :
+Résolution Technique
+Un patch d'interception HTTP a été intégré dans src/config.py. Ce script Python surcharge dynamiquement la bibliothèque requests lors des requêtes adressées au serveur MLflow :
 
-* **Séparation Registre / Stockage :** PostgreSQL stocke les métadonnées de MLflow, tandis qu'un volume Docker partagé (`./mlruns_artifacts`) stocke les fichiers binaires `.pkl`.
-* **Lazy Loading :** L'API FastAPI ne charge pas les modèles au démarrage. Elle interroge MLflow à la volée lors de la première requête, télécharge la dernière version depuis le volume partagé, puis la met en cache (RAM) pour les requêtes suivantes.
+L'adresse IP réelle ou le nom d'hôte interne Docker (http://mlflow:5000) est résolu.
+L'en-tête de la requête HTTP est écrasé à la volée pour forcer la valeur attendue par le serveur MLflow.
+Grâce à cette surcharge, l'API peut communiquer de façon fluide avec le Model Registry sans compromettre la sécurité globale.
 
-#### 4. Architecture Réseau & Parade DNS Rebinding
+## 6. Base de Données PostgreSQL : Justification et Conformité
+Pourquoi PostgreSQL ?
+Concurrence avancée : Indispensable pour traiter de front les requêtes du middleware Flask, les téléversements OCR et la journalisation d'audit.
+Persistance native pour MLflow : Remplace l'ancienne base SQLite locale par un SGBDR de niveau production.
+Isolation de sécurité (RGPD) : Permet l'établissement de relations d'intégrité strictes assurant qu'un client final ne peut accéder qu'à ses propres données de prélèvements à l'aide de sa clé API unique.
 
-L'infrastructure de calcul et de stockage est entièrement conteneurisée via Docker Compose.
-Pour contrer la sécurité stricte d'Uvicorn au sein du réseau Docker isolé (erreur 403 HTTP *DNS rebinding* lors des appels internes vers MLflow), un patch intercepte et écrase l'en-tête `Host` à la volée dans l'API :
 
-```python
-import requests
-_old_prepare_headers = requests.models.PreparedRequest.prepare_headers
-def patched_prepare_headers(self, headers):
-    _old_prepare_headers(self, headers)
-    self.headers["Host"] = "localhost:5000"
-requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
-```
+## 7. Transition vers le Frontend Flask
+L'interface utilisateur experte a été migrée de Streamlit vers Flask (Port 5001). Cette évolution permet :
 
----
-
-## BDD - Comparatif & Choix de l'Infrastructure
-
-### Pourquoi PostgreSQL ? (Le SGBD Industriel & Analytique)
-
-1. **Gestion de la concurrence :** Indispensable puisque l'architecture accueille simultanément les requêtes du Front-end, l'ingestion OCR asynchrone et les logs du middleware HTTP.
-2. **Support MLflow Natif :** Remplace l'ancien stockage SQLite instable pour centraliser le *Backend Store* de MLflow de manière persistante.
-3. **Sécurité RGPD :** Permet la gestion relationnelle stricte entre les clés API (`clients`) et les historiques d'analyse (`prelevements`), garantissant qu'un client ne voit que ses propres données.
+Une meilleure gestion de l'authentification et de l'état des sessions.
+La mise en place de tableaux de bord différenciés selon le profil (Client, Analyste Qualité, Responsable d'Exploitation).
+Séparation stricte Hôte/Réseau : Flask s'exécute sur l'hôte local WSL2 et interroge l'API FastAPI conteneurisée via http://localhost:8000 (et non via l'adresse interne réseau http://api:8000 qui n'est pas résoluble depuis l'hôte).

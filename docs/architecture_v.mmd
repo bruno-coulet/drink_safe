@@ -1,49 +1,95 @@
-%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'Segoe UI, Helvetica, sans-serif','fontSize':'15px','lineColor':'#5f6368','clusterBkg':'#f8f9fa','clusterBorder':'#cfd8dc'}}}%%
-graph TD
-    user(["fa:fa-user Expert / Administrateur"])
+flowchart TD
+    %% Définition des styles visuels
+    classDef clientStyle fill:#2f80ed,stroke:#1d5ca8,stroke-width:2px,color:#fff;
+    classDef frontStyle fill:#f2994a,stroke:#c47123,stroke-width:2px,color:#fff;
+    classDef apiStyle fill:#27ae60,stroke:#1e7e43,stroke-width:2px,color:#fff;
+    classDef dbStyle fill:#9b51e0,stroke:#7035ab,stroke-width:2px,color:#fff;
+    classDef externalStyle fill:#eb5757,stroke:#b83434,stroke-dasharray: 5 5,stroke-width:2px,color:#fff;
 
-    subgraph PRESENTATION["PRESENTATION - Hote local WSL2"]
-        UI["Interface Streamlit<br/>front/app.py : Port 8501"]
-    end
-
-    subgraph APILAYER["LOGICIELLE and INFERENCE - Conteneur Docker"]
+    %% ==========================================
+    %% COUCHE 1 : PRÉSENTATION (HAUT)
+    %% ==========================================
+    subgraph Host ["Machine Hôte (Windows / WSL2)"]
         direction TB
-        MW["Middleware Monitoring/RGPD  +  Auth cle API (X-API-Key)"]
-        ROUTERS["API Unique FastAPI - api : Port 8000<br/>/api/clients · /api/measurements<br/>/api/predict (garde-fous OMS) · /api/ocr"]
-        CACHE["Cache modeles RAM - ml_models (Lazy Loading)"]
-        MW --> ROUTERS --> CACHE
+        Client["👤 Client Final<br/>(Clé API dans le Header)"]:::clientStyle
+        FlaskFront["🌐 Frontend Flask<br/>(Port 5001 - IHM Expert & Client)"]:::frontStyle
     end
 
-    OCRAPI["API OCR.space (externe)<br/>Extraction documentaire"]
-
-    subgraph DATA["TRACKING and DONNEES - Conteneurs Docker"]
+    %% ==========================================
+    %% COUCHE 2 : MIDDLEWARE & ROUTAGE (MILIEU-HAUT)
+    %% ==========================================
+    subgraph APISecurity ["Sécurité & Contrôle API (FastAPI - Port 8000)"]
         direction TB
-        TRAIN["mlops-training (ephemere) - 4 modeles"]
-        MLFLOW["MLflow Tracking + Registry - mlflow-back : Port 5000"]
-        PG[("PostgreSQL 16 - postgres : 5432<br/>Metier + Metadonnees MLflow")]
-        VOL[/"Volume ./mlruns_artifacts (.pkl)"/]
-        TRAIN --> MLFLOW
+        MiddlewareAuth["🔐 Middleware Auth<br/>(Validation X-API-Key)"]:::apiStyle
+        MiddlewareDNS["🛡️ Patch DNS Rebinding<br/>(Surcharge Host Header)"]:::apiStyle
     end
 
-    user --> UI
-    UI -->|"Requetes HTTP + cle API"| MW
-    MW -.->|"Logs action_logs"| PG
-    ROUTERS -->|"Persistance / historisation"| PG
-    ROUTERS -->|"OCR externe"| OCRAPI
-    ROUTERS -->|"Interroge registre"| MLFLOW
-    CACHE -.->|"Lazy load .pkl"| VOL
-    MLFLOW -->|"Backend Store SQL"| PG
-    MLFLOW -->|"Artifact Store"| VOL
-    TRAIN -->|"Entraine / publie"| MLFLOW
-    TRAIN -->|"Ecrit artefacts"| VOL
+    %% ==========================================
+    %% COUCHE 3 : COEUR LOGIQUE MONOLITHE (MILIEU)
+    %% ==========================================
+    subgraph APIMonolith ["API Unique Modulaire (Conteneur 'api')"]
+        direction TB
+        subgraph Routes ["Routes / Endpoints FastAPI"]
+            direction LR
+            RouteClients["/api/clients<br/>(Admin: CRUD & Clés)"]
+            RouteData["/api/measurements<br/>(Ingestion & Select)"]
+            RoutePredict["/api/predict/all<br/>(Consensus 4 modèles)"]
+            RouteOCR["/api/ocr/lab-report<br/>(OCR & Parsing)"]
+        end
+    end
 
-    classDef ui fill:#fff3e0,stroke:#fb8c00,stroke-width:2px,color:#000;
-    classDef api fill:#e8f0fe,stroke:#4285f4,stroke-width:2px,color:#000;
-    classDef store fill:#e6f4ea,stroke:#34a853,stroke-width:2px,color:#000;
-    classDef ext fill:#fce8e6,stroke:#ea4335,stroke-width:2px,color:#000;
-    classDef train fill:#f3e8fd,stroke:#9334e6,stroke-width:2px,color:#000;
-    class UI ui;
-    class MW,ROUTERS,CACHE api;
-    class MLFLOW,PG,VOL store;
-    class OCRAPI ext;
-    class TRAIN train;
+    %% ==========================================
+    %% COUCHE 4 : BASE DE DONNÉES & MLOPS (MILIEU-BAS)
+    %% ==========================================
+    subgraph DockerNet ["Réseau Interne Docker (Isolé)"]
+        direction TB
+        PostgresDB[("🐘 PostgreSQL (postgres)<br/>Port 5432<br/>Données métier & Métadonnées MLflow")]:::dbStyle
+        MLflowServer["📊 MLflow Server (mlflow)<br/>Port 5000<br/>Gestionnaire d'expériences"]:::dbStyle
+        MLopsTraining["⚙️ Pipeline MLOps (mlops-training)<br/>(Conteneur d'entraînement éphémère)"]:::dbStyle
+    end
+
+    %% ==========================================
+    %% COUCHE 5 : PERSISTANCE PHYSIQUE & EXTERNE (BAS)
+    %% ==========================================
+    subgraph StorageExternal ["Stockage & Tiers Externes"]
+        direction TB
+        VolShared["📁 Volume Partagé ./mlruns_artifacts<br/>(Stockage physique des modèles .pkl)"]:::dbStyle
+        OCRSpace["☁️ Service OCR.space (Externe Cloud)<br/>(Extraction de texte par IA)"]:::externalStyle
+    end
+
+    %% ==========================================
+    %% LIAISONS ET FLUX FONCTIONNELS
+    %% ==========================================
+
+    %% Flux d'entrée
+    Client -- "1. Appel direct (API Key)" --> MiddlewareAuth
+    FlaskFront -- "1. Requête HTTP (localhost:8000)" --> MiddlewareAuth
+
+    %% Passage à travers les middlewares de sécurité
+    MiddlewareAuth --> MiddlewareDNS
+    MiddlewareDNS --> Routes
+
+    %% Interactions avec la base de données
+    RouteClients --> PostgresDB
+    RouteData --> PostgresDB
+
+    %% Inférence & OCR
+    RoutePredict --> MLflowServer
+    RouteOCR -- "2. Envoi PDF / Image" --> OCRSpace
+    OCRSpace -- "3. Retour texte JSON brut" --> RouteOCR
+    RouteOCR -- "4. Enregistrement prélèvement" --> RouteData
+
+    %% Pipeline d'entraînement et MLflow
+    MLopsTraining -- "A. Enregistre Runs & Métriques" --> MLflowServer
+    MLopsTraining -- "B. Sauvegarde modèles .pkl" --> VolShared
+
+    MLflowServer -- "Stocke métadonnées SQL" --> PostgresDB
+    MLflowServer -- "Lit/Écrit artefacts" --> VolShared
+
+    %% ==========================================
+    %% CONTRAINTES DE RENDU VERTICALES (LIAISONS INVISIBLES)
+    %% ==========================================
+    Host ~~~ APISecurity
+    APISecurity ~~~ APIMonolith
+    APIMonolith ~~~ DockerNet
+    DockerNet ~~~ StorageExternal

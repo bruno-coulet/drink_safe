@@ -42,16 +42,15 @@ jobs:
           echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
           echo "OCR_SPACE_API_KEY=helloworld" >> .env
           echo "SECRET_KEY=TestSecretKey" >> .env
-          echo "DATABASE_URL=postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@postgres-db:5432/waterflow_db" >> .env
+          echo "DATABASE_URL=postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@postgres:5432/waterflow_db" >> .env
 
       # Étape F : Il allume PostgreSQL et MLflow en tâche de fond (Docker)
       - name: Lancement de l'infrastructure Docker (BDD & MLflow)
         run: |
-          docker compose up -d postgres-db mlflow-back
+          docker compose up -d postgres mlflow
           echo "Attente de 15s pour l'initialisation de MLflow..."
           sleep 30
-          docker compose up -d api-unique
-
+          docker compose up -d api
       # Étape G : L'épreuve finale, il lance tes tests
       - name: Exécution des tests (PyTest)
         run: uv run pytest -v

@@ -22,9 +22,14 @@ body {
 color: floralwhite!important;
 }
 
-h2.mb-1, .mb-0{
+h2.mb-1, .mb-0, .label{
     color: floralwhite;
 }
+
+.cold-md-5{
+    width: max-content!important;
+}
+
 
 .form-label{
 color: #71a6d5;
