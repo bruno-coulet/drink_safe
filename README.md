@@ -31,7 +31,7 @@ Le jeu de données contient :
 - 9 mesures physico-chimiques de la qualité de l'eau (features)
 - une étiquette binaire (1 = potable, 0 = non potable)
 
-recall sur la classe non-potable est la métrique métier prioritaire ici : minimiser les cm_fp.   
+recall sur la classe non-potable est la métrique métier prioritaire ici : minimiser les cm_fp.
  sklearn calcule le recall sur la classe positive (1 = Potable) par défaut, ce qui ne correspond pas à cet objectif.
 
 
@@ -69,6 +69,8 @@ Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hô
 
 ```bash
 cd front && uv run python app.py
+# ou
+uv run flask --app front/app run --debug --port 5001
 ```
 
 Interface utilisateur

@@ -9,42 +9,38 @@ name: Waterflow 2 CI
 # tandis que l'entraînement ferait l'objet d'un pipeline asynchrone distinct (Continuous Training).
 
 
-# 1. QUAND DÉCLENCHER LE ROBOT ?
-# À chaque 'push' ou 'pull request' sur n'importe quelle branche
+# DÉCLENCHEMENT DU ROBOT à chaque 'push' ou 'pull request' sur n'importe quelle branche
 on:
   push:
     branches: [ "**" ]
   pull_request:
     branches: [ "**" ]
 
-# 2. QUE DOIT-IL FAIRE ?
+
 jobs:
   tests-pytest:
-    # On lui demande un serveur vierge sous Ubuntu (comme ton WSL)
+
     runs-on: ubuntu-latest
 
     steps:
-      # Étape A : Le robot télécharge ton code source
+
       - name: Récupération du code
         uses: actions/checkout@v4.2.2
 
-      # Étape B : Il installe le gestionnaire de paquets ultra-rapide 'uv'
       - name: Installation de uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
 
-      # Étape C : Il installe Python 3.12
       - name: Configuration de Python 3.12
         uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
 
-      # Étape D : Il installe tes dépendances (FastAPI, PyTest, etc.)
       - name: Installation des dépendances
         run: uv sync --frozen
 
-      # Étape E : Il recrée ton environnement avec de fausses variables pour les tests
+      # Recrée l'environnement avec de fausses variables pour les tests
       - name:  Création de l'environnement de Test (.env)
         shell: bash
         run: |
@@ -53,7 +49,7 @@ jobs:
           echo "SECRET_KEY=TestSecretKey" >> .env
           echo "DATABASE_URL=postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@postgres:5432/waterflow_db" >> .env
 
-      # Étape F : Il allume PostgreSQL et MLflow en tâche de fond (Docker)
+      # Étape F : allume PostgreSQL et MLflow en tâche de fond (Docker)
       - name: Lancement de l'infrastructure Docker (BDD & MLflow)
         run: |
           docker compose up -d postgres mlflow
@@ -67,6 +63,12 @@ jobs:
           docker compose up -d api
           sleep 10
 
-      # Étape G : L'épreuve finale, il lance tes tests
       - name: Exécution des tests (PyTest)
+      # Surcharge d'env : écrase les variables d'environnement uniquement pour l'étape de Pytest
+      # pour forcer le runner GitHub à utiliser son propre localhost (où les ports Docker sont exposés).
+        env:
+          DATABASE_URL: "postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@127.0.0.1:5432/waterflow_db"
+          MLFLOW_TRACKING_URI: "http://127.0.0.1:5000"
+
+      # Lance les tests
         run: uv run pytest -v
