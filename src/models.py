@@ -51,6 +51,8 @@ def get_models() -> dict[str, Any]:
             subsample=0.8,
             colsample_bytree=0.8,
             eval_metric="logloss",
+            # Compense le déséquilibre 61/39 (n_négatifs / n_positifs ≈ 1.56)
+            scale_pos_weight=1.56,
             random_state=RANDOM_STATE
         ),
 
