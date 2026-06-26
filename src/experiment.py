@@ -172,7 +172,7 @@ def executer_pipeline_mlops() -> None:
 
         # 3. Bloc d'exécution mlflow
         with mlflow.start_run(run_name=nom_modele):
- 
+
             mlflow.log_param("architecture", nom_modele)
             mlflow.log_param("n_train", len(y_train))
             mlflow.log_param("n_test", len(y_test))
@@ -226,7 +226,7 @@ def executer_pipeline_mlops() -> None:
                 "test_recall_non_potable": round(float(recall_score(y_test, y_pred_test, pos_label=0, zero_division=0)), 4),
             })
 
-            nom_registre = f"WaterModel_{nom_modele}"
+            nom_registre = f"{nom_modele}"
             mlflow.sklearn.log_model(
                 sk_model=model_instance,
                 artifact_path="model",
