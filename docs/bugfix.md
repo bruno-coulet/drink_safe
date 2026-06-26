@@ -12,6 +12,14 @@
 * **Résolutions appliquées :**
   * **Volume partagé :** Ajout du volume `./mlruns_artifacts` sur le conteneur `mlops-training` dans le fichier `docker-compose.yml`, et implémentation d'une temporisation native (`sleep 15`) pour attendre que le serveur MLflow ait fini de démarrer avant de lancer l'entraînement.
   * **Lazy Loading Dynamique (Cache-Aside) :** Modification du code (`src/routes/predictions.py`). L'API FastAPI ne charge plus les modèles au démarrage. À la première requête d'inférence, elle interroge dynamiquement le Model Registry pour obtenir le numéro de version le plus récent, télécharge le binaire `.pkl` depuis le volume local partagé, et le place dans son cache mémoire RAM pour les requêtes suivantes (Zero Downtime lors des réentraînements).
+* **Pour les test :**
+Méthode DevOps (Zéro code, 100% MLOps)
+
+Puisque le chemin ``/app/`` n'existe qu'à l'intérieur de Docker, la meilleure pratique est de ne pas tester l'API depuis le PC, mais de lancer la suite de tests directement à l'intérieur du conteneur ``api``(qui tourne en tâche de fond) :
+
+```bash
+docker compose exec api pytest tests/test_functionnal.py -s
+```
 
 ---
 

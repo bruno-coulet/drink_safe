@@ -22,6 +22,10 @@ from src.dependencies.auth import get_current_client
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 
+# Pour les test locaux, réécrire le chemin MLflow (Docker vs WSL2)
+from pathlib import Path
+from src.config import ROOT_DIR
+
 router = APIRouter(prefix="/predict", tags=["Inférence & Modèle IA"])
 
 # Catalogue des modèles exposés (doit correspondre aux clés de src.models.get_models)
@@ -91,7 +95,17 @@ def _charger_modele(model_choice: str) -> Tuple[Any, str]:
         if not versions:
             raise ValueError("Aucune version enregistrée trouvée.")
         derniere_version = max(int(v.version) for v in versions)
+        # Charge le model
         model_uri = f"models:/{nom_registre}/{derniere_version}"
+
+        # --- ASTUCE MLOPS POUR LES TESTS LOCAUX ---
+        # Le chemin généré par MLflow pointe vers /app/ (le dossier Docker)
+        # Réécrit le chemin.
+        if "/app/" in model_uri and not Path("/app").exists():
+            model_uri = model_uri.replace("/app", str(ROOT_DIR))
+
+
+
         model = mlflow.sklearn.load_model(model_uri)
         ml_models[model_choice] = model
         ml_model_versions[model_choice] = str(derniere_version)

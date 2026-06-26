@@ -20,6 +20,8 @@ RUN uv sync --frozen --no-dev --no-install-project
 # STAGE 2 : Image de Production finale épurée
 # =========================================================================
 FROM python:3.12-slim
+RUN apt-get update && apt-get install -y git
+
 
 WORKDIR /app
 

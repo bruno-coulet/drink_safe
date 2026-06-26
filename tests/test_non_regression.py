@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import f1_score, average_precision_score, confusion_matrix
 from src.api import ml_models
-from src.config import settings, PATH_WATER_STD
+from src.config import settings,PATH_WATER_STD
 
 def ensure_models_are_loaded():
     """Force le chargement des modèles en mémoire vive s'ils ne le sont pas encore."""
@@ -35,7 +35,7 @@ def ensure_models_are_loaded():
 def test_non_regression_performance_catalogue() -> None:
     """S'assure que les modèles actifs maintiennent un score F1 minimal de 60% et un AUC-PR minimal de 50%."""
     # 1. Vérification de l'existence du dataset de validation standardisé
-    filepath_val: str = PATH_WATER_STD
+    filepath_val: str = "data/processed/water_std.csv"
     assert os.path.exists(filepath_val), f"Le fichier de validation standardisé est introuvable : {filepath_val}"
 
     # 2. Chargement du dataset de validation
