@@ -25,7 +25,7 @@ jobs:
     steps:
 
       - name: Récupération du code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Installation de uv
         uses: astral-sh/setup-uv@v6
@@ -33,7 +33,7 @@ jobs:
           version: "latest"
 
       - name: Configuration de Python 3.12
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 

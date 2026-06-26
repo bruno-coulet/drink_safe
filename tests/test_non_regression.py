@@ -1,8 +1,8 @@
 """
 Projet : Waterflow 2
 Composant : Suite de Tests de Non-Régression (PyTest) - Version 2 (Enrichie)
-Description : Vérification automatique des métriques de performance du catalogue 
-              de modèles (F1-score et AUC-PR) et validation de la structure de la 
+Description : Vérification automatique des métriques de performance du catalogue
+              de modèles (F1-score et AUC-PR) et validation de la structure de la
               matrice de confusion sur le jeu de validation.
 """
 import os
@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import f1_score, average_precision_score, confusion_matrix
 from src.api import ml_models
-from src.config import settings
+from src.config import settings, PATH_WATER_STD
 
 def ensure_models_are_loaded():
     """Force le chargement des modèles en mémoire vive s'ils ne le sont pas encore."""
@@ -35,20 +35,20 @@ def ensure_models_are_loaded():
 def test_non_regression_performance_catalogue() -> None:
     """S'assure que les modèles actifs maintiennent un score F1 minimal de 60% et un AUC-PR minimal de 50%."""
     # 1. Vérification de l'existence du dataset de validation standardisé
-    filepath_val: str = "data/processed/water_std.csv"
+    filepath_val: str = PATH_WATER_STD
     assert os.path.exists(filepath_val), f"Le fichier de validation standardisé est introuvable : {filepath_val}"
-    
+
     # 2. Chargement du dataset de validation
     df_val = pd.read_csv(filepath_val)
-    
+
     # Séparation des features et de la cible
     assert "Potability" in df_val.columns, "La colonne cible 'Potability' est absente du fichier de validation"
     X_val = df_val.drop(columns=["Potability"])
     y_val = df_val["Potability"]
-    
+
     # 3. Garantie du chargement des modèles (Lazy Loading)
     ensure_models_are_loaded()
-    
+
     if not ml_models:
         pytest.skip("Aucun modèle n'est actuellement chargé dans ml_models (le Model Registry ou le serveur de tracking est injoignable).")
 
@@ -58,11 +58,11 @@ def test_non_regression_performance_catalogue() -> None:
             y_pred = model.predict(X_val)
         except Exception as e:
             pytest.fail(f"Échec de la prédiction pour le modèle {model_name} : {e}")
-            
+
         # Validation du score F1
         score_f1 = f1_score(y_val, y_pred)
         assert score_f1 >= 0.60, f"Le modèle {model_name} a subi une régression sur le F1-score : {score_f1:.2f} < 0.60"
-        
+
         # Validation de l'AUC-PR (Average Precision Score)
         try:
             if hasattr(model, "predict_proba"):
@@ -71,7 +71,7 @@ def test_non_regression_performance_catalogue() -> None:
                 y_proba = model._model_impl.predict_proba(X_val)[:, 1]
             else:
                 y_proba = y_pred
-                
+
             auc_pr = average_precision_score(y_val, y_proba)
             assert auc_pr >= 0.50, f"Le modèle {model_name} a un AUC-PR insuffisant : {auc_pr:.2f} < 0.50"
         except Exception as e:

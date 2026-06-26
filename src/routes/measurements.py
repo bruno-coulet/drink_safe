@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Endpoints de Gestion des Mesures et Prélèvements
 Description : Enregistrement des données physico-chimiques et isolation des
               consultations par client pour la conformité RGPD.
@@ -36,7 +36,7 @@ class MeasurementCreate(BaseModel):
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def deposer_mesures(
-    payload: MeasurementCreate, 
+    payload: MeasurementCreate,
     client_id: str = Depends(get_current_client)
 ) -> Dict[str, Any]:
     """Enregistre un prélèvement d'eau structuré associé au client authentifié.

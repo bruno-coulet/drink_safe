@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Route de Monitoring et Supervision (Responsable d'Exploitation)
 Description : Expose les journaux d'accès (action_logs) et les métriques
               agrégées pour la supervision de l'infrastructure.

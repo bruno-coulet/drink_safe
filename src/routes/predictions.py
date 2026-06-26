@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Endpoints de Prédiction et Inférence IA
 Description : Gestion des requêtes de classification de la potabilité,
               application des règles métiers de l'OMS, inférence mono-modèle,
@@ -372,4 +372,4 @@ def _sauvegarder_prelevement_en_bdd(
                 ))
                 conn.commit()
     except Exception as e:
-        print(f"⚠️ Alerte MLOps : Impossible d'historiser le prélèvement en BDD : {e}")
+        print(f"Alerte MLOps : Impossible d'historiser le prélèvement en BDD : {e}")

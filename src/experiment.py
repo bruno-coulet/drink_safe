@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Pipeline d'Entraînement et Tracking MLOps (MLflow)
 Description : Chargement des datasets, entraînement du catalogue de modèles,
               initialisation automatique de PostgreSQL et enregistrement
@@ -11,7 +11,7 @@ Description : Chargement des datasets, entraînement du catalogue de modèles,
 -------------------------------------------------------------------------------
 """
 
-import os
+
 from collections import defaultdict
 from typing import Any
 import numpy as np
@@ -27,6 +27,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 import mlflow
 import mlflow.sklearn
 from pathlib import Path
+from src.config import PATH_WATER_IMPUTED, PATH_WATER_STD
 
 
 import mlflow
@@ -47,16 +48,6 @@ mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 mlflow.set_experiment("Drink_safe")
 
 
-# def _extraire_params(modele: Any) -> dict:
-#     """
-#     Extrait les hyperparamètres en gérant les Pipeline sklearn.
-#     Pour un Pipeline, remonte les params du dernier estimateur (step 'model').
-#     """
-#     if isinstance(modele, Pipeline):
-#         etape = modele.named_steps.get("model", list(modele.named_steps.values())[-1])
-#         return etape.get_params(deep=False)
-#     return modele.get_params(deep=False)
-
 def _extraire_params(modele: Any, nom_dataset: str) -> dict:
     """
     Extrait les hyperparamètres en gérant les Pipeline sklearn,
@@ -74,9 +65,6 @@ def _extraire_params(modele: Any, nom_dataset: str) -> dict:
 
     # Retourne le dictionnaire complet
     return params
-
-
-
 
 
 def _fit_kwargs(modele: Any, y: pd.Series) -> dict:
@@ -135,15 +123,14 @@ def executer_pipeline_mlops() -> None:
 
     print("[MLOps] Etape 2 : Chargement de la matrice de données...")
 
-    data_dir = Path("data/processed/")
-
     # Charge et split les DEUX datasets en mémoire
-    df_imputed = pd.read_csv(Path( data_dir / "water_imputed.csv"))
+    df_imputed = pd.read_csv(PATH_WATER_IMPUTED)
+    df_std = pd.read_csv(PATH_WATER_STD)
+
     X_train_imp, X_test_imp, y_train_imp, y_test_imp = train_test_split(
         df_imputed.drop(columns=["Potability"], errors="ignore"), df_imputed["Potability"], test_size=0.2, random_state=42, stratify=df_imputed["Potability"]
     )
 
-    df_std = pd.read_csv(Path(data_dir / "water_std.csv"))
     X_train_std, X_test_std, y_train_std, y_test_std = train_test_split(
         df_std.drop(columns=["Potability"], errors="ignore"), df_std["Potability"], test_size=0.2, random_state=42, stratify=df_std["Potability"]
     )

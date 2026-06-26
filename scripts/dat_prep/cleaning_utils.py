@@ -8,7 +8,6 @@ de fuite de données (Data Leakage) entre les ensembles d'entraînement et de te
 Développé pour Python 3.10+ et Pandas.
 """
 
-import re
 from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
@@ -185,15 +184,15 @@ def transform_clean(X_test: pd.DataFrame, stats: Dict[str, Any], config: Dict[st
         Le DataFrame de test nettoyé, aligné avec la structure et les valeurs du Train set.
     """
     X = X_test.copy()
-    
+
     # 1. Alignement des colonnes supprimées
     X = X.drop(columns=stats.get("cols_to_drop", []), errors="ignore")
-    
+
     # 2. Imputation par les modes appris sur le Train set
     for c, mode_val in stats.get("modes", {}).items():
         if c in X.columns:
             X[c] = X[c].fillna(mode_val)
-            
+
     # 3. Application des replace_maps de la configuration
     for col, replace_map in config.get("replace_maps", {}).items():
         if col in X.columns:
@@ -204,5 +203,5 @@ def transform_clean(X_test: pd.DataFrame, stats: Dict[str, Any], config: Dict[st
         if c in X.columns:
             X[c] = pd.to_numeric(X[c], errors="coerce")
             X[c] = X[c].fillna(median_val)
-            
+
     return X

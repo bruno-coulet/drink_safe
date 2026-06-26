@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Endpoints de Gestion des Clients
 Description : Routes API pour l'enregistrement, la consultation et la
               suppression des clients, ainsi que la gestion du cycle de vie

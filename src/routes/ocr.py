@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Endpoints d'Ingestion et Traitement OCR
 Description : Réception de fiches de laboratoire (PDF/Images), interconnexion
               avec l'API OCR.space, extraction des métriques et persistance.
@@ -72,15 +72,15 @@ async def ingerer_fiche_laboratoire(
         reponse_externe = requests.post(
             OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=15
         )
-        
+
         if reponse_externe.status_code != 200:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Le service OCR.space a répondu avec une erreur (Code {reponse_externe.status_code})."
             )
-            
+
         resultat_json = reponse_externe.json()
-        
+
     except requests.exceptions.Timeout:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
@@ -122,32 +122,32 @@ async def ingerer_fiche_laboratoire(
     # 6. Persistance dans PostgreSQL sous la provenance "OCR"
     query_insert: str = """
     INSERT INTO prelevements (
-        client_id, provenance, ph, hardness, solids, chloramines, 
-        sulfate, conductivity, organic_carbon, trihalomethanes, 
+        client_id, provenance, ph, hardness, solids, chloramines,
+        sulfate, conductivity, organic_carbon, trihalomethanes,
         turbidity, observations
     ) VALUES (%s, 'OCR', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING id;
     """
-    
+
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query_insert, (
                     client_id, mesures["ph"], mesures["Hardness"], mesures["Solids"],
                     mesures["Chloramines"], mesures["Sulfate"], mesures["Conductivity"],
-                    mesures["Organic_carbon"], mesures["Trihalomethanes"], 
+                    mesures["Organic_carbon"], mesures["Trihalomethanes"],
                     mesures["Turbidity"], f"Fichier d'origine : {nom_fichier}"
                 ))
                 prelevement_id: int = cursor.fetchone()[0]
                 conn.commit()
-                
+
         return {
             "status": "Succès",
             "message": "La fiche laboratoire a été numérisée et enregistrée.",
             "prelevement_id": prelevement_id,
             "extracted_data": mesures
         }
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

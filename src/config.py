@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Configuration Centralisée de l'API Unique
 Description : Gestion dynamique des configurations selon le contexte d'exécution
               (Local vs Docker) pour PostgreSQL et le tracking MLflow.
@@ -9,13 +9,25 @@ Description : Gestion dynamique des configurations selon le contexte d'exécutio
 
 import os
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 import psycopg2
 
-# Résolution du chemin vers le fichier .env à la racine du projet
-BASE_DIR: Path = Path(__file__).resolve().parents[1]
-load_dotenv(BASE_DIR / ".env")
+
+ROOT_DIR: Path = Path(__file__).resolve().parents[1]
+
+# 2. Chargement du fichier .env
+load_dotenv(ROOT_DIR / ".env")
+
+DATA_DIR: Path = ROOT_DIR / "data"
+DATA_RAW_DIR: Path = DATA_DIR / "raw"
+DATA_PROCESSED_DIR: Path = DATA_DIR / "processed"
+
+PATH_WATER_IMPUTED: Path = DATA_PROCESSED_DIR / "water_imputed.csv"
+PATH_WATER_STD: Path = DATA_PROCESSED_DIR / "water_std.csv"
+PATH_WATER_RAW: Path = DATA_RAW_DIR / "water_potability.csv"
+
+ARTIFACTS_DIR: Path = ROOT_DIR / "artifacts"
+FRONT_DIR: Path = ROOT_DIR / "front"
 
 
 class Settings:

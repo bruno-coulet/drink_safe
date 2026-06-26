@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Point d'Entrée, Cycle de Vie et Middleware de l'API Unique
 Description : Serveur FastAPI unifié orchestrant l'initialisation de PostgreSQL,
               le chargement des modèles MLflow, l'exposition des services et
@@ -8,11 +8,9 @@ Description : Serveur FastAPI unifié orchestrant l'initialisation de PostgreSQL
 -------------------------------------------------------------------------------
 """
 
-import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List
-import pandas as pd
 import mlflow
 import mlflow.sklearn
 from fastapi import FastAPI, Request, Response
@@ -121,7 +119,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Instanciation de l'API Unique (Data + Model + OCR)
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Service unifié Waterflow 2 : Gestion des prélèvements, Ingestion OCR et Inférence.",
+    description="Service unifié Drink safe : Gestion des prélèvements, Ingestion OCR et Inférence.",
     version=settings.VERSION,
     lifespan=lifespan
 )
