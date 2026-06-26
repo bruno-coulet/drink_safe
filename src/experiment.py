@@ -26,6 +26,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils.class_weight import compute_sample_weight
 import mlflow
 import mlflow.sklearn
+from pathlib import Path
+
+
+import mlflow
 
 import requests
 _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
@@ -130,58 +134,68 @@ def executer_pipeline_mlops() -> None:
     init_db()
 
     print("[MLOps] Etape 2 : Chargement de la matrice de données...")
-    path_brut = "data/processed/water_imputed.csv"
 
-    if not os.path.exists(path_brut):
-        raise FileNotFoundError(f"Fichier introuvable : {path_brut}")
+    data_dir = Path("data/processed/")
 
-    df = pd.read_csv(path_brut)
-    X = df.drop(columns=["Potability"], errors="ignore")
-    y = df["Potability"]
-
-    # Split stratifié : conserve le ratio 61/39 dans train et test
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    # Charge et split les DEUX datasets en mémoire
+    df_imputed = pd.read_csv(Path( data_dir / "water_imputed.csv"))
+    X_train_imp, X_test_imp, y_train_imp, y_test_imp = train_test_split(
+        df_imputed.drop(columns=["Potability"], errors="ignore"), df_imputed["Potability"], test_size=0.2, random_state=42, stratify=df_imputed["Potability"]
     )
 
-    print(
-        f"[MLOps] Split stratifie — "
-        f"Train : {len(y_train)} ({y_train.mean():.1%} potable) | "
-        f"Test  : {len(y_test)} ({y_test.mean():.1%} potable)"
+    df_std = pd.read_csv(Path(data_dir / "water_std.csv"))
+    X_train_std, X_test_std, y_train_std, y_test_std = train_test_split(
+        df_std.drop(columns=["Potability"], errors="ignore"), df_std["Potability"], test_size=0.2, random_state=42, stratify=df_std["Potability"]
     )
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     modeles = get_models()
 
-    for nom_modele, instance_modele in modeles.items():
+    for nom_modele, model_instance in modeles.items():
         print(f"[MLOps] Lancement du run MLflow : {nom_modele}...")
 
-        with mlflow.start_run(run_name=f"Run_{nom_modele}"):
+        # 2. SELECTION DYNAMIQUE DU DATASET SELON LE MODELE
+        if "LogisticRegression" in nom_modele or "MLP" in nom_modele:
+            X_train, X_test, y_train, y_test = X_train_std, X_test_std, y_train_std, y_test_std
+            file_name = Path("data/processed/water_std.csv").name
+        else: # RandomForest, XGBoost...
+            X_train, X_test, y_train, y_test = X_train_imp, X_test_imp, y_train_imp, y_test_imp
+            file_name = Path("data/processed/water_imputed.csv").name
 
-            # --- Paramètres ---
+
+        # (Optionnel) Affiche la stratification
+        print(
+            f"        Split stratifié — "
+            f"Train: {len(y_train)} ({y_train.mean():.1%} potable) | "
+            f"Test: {len(y_test)} ({y_test.mean():.1%} potable)"
+        )
+
+        # 3. Bloc d'exécution mlflow
+        with mlflow.start_run(run_name=nom_modele):
+ 
             mlflow.log_param("architecture", nom_modele)
             mlflow.log_param("n_train", len(y_train))
             mlflow.log_param("n_test", len(y_test))
             mlflow.log_param("ratio_potable_train", round(float(y_train.mean()), 4))
             mlflow.log_param("ratio_potable_test", round(float(y_test.mean()), 4))
-            mlflow.log_params(_extraire_params(instance_modele, path_brut))
+            mlflow.log_params(_extraire_params(model_instance, file_name))
 
             # --- Validation croisée 5 folds stratifiés ---
             print(f"  CV 5 folds...")
-            scores_cv = _scores_cv(instance_modele, X_train, y_train, cv)
+            scores_cv = _scores_cv(model_instance, X_train, y_train, cv)
             for metrique, valeurs in scores_cv.items():
                 mlflow.log_metric(f"cv_mean_{metrique}", round(float(np.mean(valeurs)), 4))
                 mlflow.log_metric(f"cv_std_{metrique}", round(float(np.std(valeurs)), 4))
 
             # --- Entraînement final sur l'ensemble du train ---
             print(f"  Entrainement final...")
-            instance_modele.fit(X_train, y_train, **_fit_kwargs(instance_modele, y_train))
+            model_instance.fit(X_train, y_train, **_fit_kwargs(model_instance, y_train))
 
-            y_pred_test  = instance_modele.predict(X_test)
-            y_pred_train = instance_modele.predict(X_train)
+            y_pred_test  = model_instance.predict(X_test)
+            y_pred_train = model_instance.predict(X_train)
             y_proba_test = (
-                instance_modele.predict_proba(X_test)[:, 1]
-                if hasattr(instance_modele, "predict_proba") else None
+                model_instance.predict_proba(X_test)[:, 1]
+                if hasattr(model_instance, "predict_proba") else None
             )
 
             # --- Métriques test (généralisation) ---
@@ -214,7 +228,7 @@ def executer_pipeline_mlops() -> None:
 
             nom_registre = f"WaterModel_{nom_modele}"
             mlflow.sklearn.log_model(
-                sk_model=instance_modele,
+                sk_model=model_instance,
                 artifact_path="model",
                 registered_model_name=nom_registre
             )

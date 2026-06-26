@@ -3,6 +3,7 @@
 ├── Dockerfile
 ├── GEMINI_CONTEXT.md
 ├── README.md
+├── README_alt.md
 ├── artifacts
 │   └── 8c2db9a4a1f341739a358692cbd1fcd7
 │       └── artifacts
@@ -19,7 +20,8 @@
 │               └── requirements.txt
 ├── consignes
 │   ├── 1_spec_fonctionnelles.md
-│   └── 2_cahiers_des_charges.md
+│   ├── 2_cahiers_des_charges.md
+│   └── 3_etat_avancement.md
 ├── data
 │   ├── processed
 │   │   ├── water_imputed.csv
@@ -34,7 +36,6 @@
 │   ├── architecture.mmd
 │   ├── architecture_v.mmd
 │   ├── bugfix.md
-│   ├── bugfix_2.md
 │   ├── data_model.md
 │   ├── erDiagram.mmd
 │   ├── flux_prediction.mmd
@@ -67,13 +68,12 @@
 │       │   └── dashboard.html
 │       └── login.html
 ├── img
-│   ├── architecture_h.png
-│   ├── architecture_v.png
+│   ├── architecture_v.svg
 │   ├── data_model.png
 │   ├── flux_prediction.png
 │   ├── mermaid-diagram.png
 │   ├── model_logique_donnee.svg
-│   ├── pipeline_mlops.png
+│   ├── pipeline_mlops.svg
 │   └── routage.svg
 ├── mlruns_artifacts
 │   └── 1
@@ -92,6 +92,20 @@
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
 │       ├── 055bc9a4e9a041b0a248af8e06a25042
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 2543ee91e04f461492ce86d726511d2e
 │       │   └── artifacts
 │       │       └── model
 │       │           ├── MLmodel
@@ -188,6 +202,20 @@
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
 │       ├── 4553f5e849324aa08ef7163acd2c05cc
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── 55d8e3d303414491bb92af66581739a6
 │       │   └── artifacts
 │       │       └── model
 │       │           ├── MLmodel
@@ -299,6 +327,20 @@
 │       │           ├── python_env.yaml
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
+│       ├── 830948a613a743ffa87b7ff6bea0be6e
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
 │       ├── 85570e2ae14b4683b34a5b98767bbed2
 │       │   └── artifacts
 │       │       └── model
@@ -353,6 +395,20 @@
 │       │           ├── registered_model_meta
 │       │           └── requirements.txt
 │       ├── a973e86c75b2470aa0ffc00f6a45f517
+│       │   └── artifacts
+│       │       └── model
+│       │           ├── MLmodel
+│       │           ├── conda.yaml
+│       │           ├── metadata
+│       │           │   ├── MLmodel
+│       │           │   ├── conda.yaml
+│       │           │   ├── python_env.yaml
+│       │           │   └── requirements.txt
+│       │           ├── model.pkl
+│       │           ├── python_env.yaml
+│       │           ├── registered_model_meta
+│       │           └── requirements.txt
+│       ├── ad74fbc890f849d4b8931f803639c1c7
 │       │   └── artifacts
 │       │       └── model
 │       │           ├── MLmodel
@@ -531,4 +587,4 @@
     ├── requires.txt
     └── top_level.txt
 
-150 directories, 382 files
+166 directories, 422 files
