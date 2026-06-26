@@ -36,7 +36,21 @@ def role_requis(role: str) -> Callable:
 @role_requis("client")
 def dashboard():
     """Page principale du client : formulaire de prédiction et upload OCR."""
-    return render_template("client/dashboard.html")
+    # 1. Vérification que le client est bien connecté
+    if "api_key" not in session or session.get("role") != "client":
+        return redirect(url_for("auth.login"))
+
+    # 2. Récupération des informations depuis la session Flask
+    donnees_client = {
+        "client_id": session.get("client_id", "ID inconnu"),
+        "nom_structure": session.get("nom_structure", "Client")
+    }
+
+    # 3. Transmission de l'objet 'client' au fichier HTML
+    return render_template(
+        "client/dashboard.html",
+        client=donnees_client
+    )
 
 
 @client_bp.route("/predict", methods=["POST"])

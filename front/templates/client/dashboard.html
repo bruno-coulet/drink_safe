@@ -2,12 +2,28 @@
 {% block title %}Portail Client — Drink Safe{% endblock %}
 
 {% block content %}
+
+<!-- En-tête Flexbox pour aligner le titre à gauche et le profil à droite -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+
+
+    {% if client %}
+    <div class="text-end">
+        <span class="badge bg-primary fs-6">{{ client.nom_structure }}</span>
+        <div class="text-muted small mt-1">ID : {{ client.client_id }}</div>
+    </div>
+    {% endif %}
+</div>
+
+
+
 <h2 class="mb-1">Evaluation de la potabilité</h2>
 <p class="text-muted mb-4">Soumettez un prélèvement manuellement ou importez une fiche laboratoire.</p>
 
 {% if erreur %}
 <div class="alert alert-danger">{{ erreur }}</div>
 {% endif %}
+
 
 <!-- SECTION 1 : Prédiction manuelle -->
 <div class="card mb-4">

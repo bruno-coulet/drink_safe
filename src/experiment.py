@@ -39,18 +39,40 @@ from src.models import get_models
 
 
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
-mlflow.set_experiment("Water_Potability_Evaluation_v2")
+# mlflow.set_experiment("Water_Potability_Evaluation_v2")
+mlflow.set_experiment("Drink_safe")
 
 
-def _extraire_params(modele: Any) -> dict:
+# def _extraire_params(modele: Any) -> dict:
+#     """
+#     Extrait les hyperparamètres en gérant les Pipeline sklearn.
+#     Pour un Pipeline, remonte les params du dernier estimateur (step 'model').
+#     """
+#     if isinstance(modele, Pipeline):
+#         etape = modele.named_steps.get("model", list(modele.named_steps.values())[-1])
+#         return etape.get_params(deep=False)
+#     return modele.get_params(deep=False)
+
+def _extraire_params(modele: Any, nom_dataset: str) -> dict:
     """
-    Extrait les hyperparamètres en gérant les Pipeline sklearn.
-    Pour un Pipeline, remonte les params du dernier estimateur (step 'model').
+    Extrait les hyperparamètres en gérant les Pipeline sklearn,
+    et ajoute manuellement le nom du dataset
     """
+    # Extrait les paramètres algorithmiques
     if isinstance(modele, Pipeline):
         etape = modele.named_steps.get("model", list(modele.named_steps.values())[-1])
-        return etape.get_params(deep=False)
-    return modele.get_params(deep=False)
+        params = etape.get_params(deep=False)
+    else:
+        params = modele.get_params(deep=False)
+
+    # Injecte le paramètre personnalisé dans le dictionnaire
+    params["dataset_type"] = nom_dataset
+
+    # Retourne le dictionnaire complet
+    return params
+
+
+
 
 
 def _fit_kwargs(modele: Any, y: pd.Series) -> dict:
@@ -142,7 +164,7 @@ def executer_pipeline_mlops() -> None:
             mlflow.log_param("n_test", len(y_test))
             mlflow.log_param("ratio_potable_train", round(float(y_train.mean()), 4))
             mlflow.log_param("ratio_potable_test", round(float(y_test.mean()), 4))
-            mlflow.log_params(_extraire_params(instance_modele))
+            mlflow.log_params(_extraire_params(instance_modele, path_brut))
 
             # --- Validation croisée 5 folds stratifiés ---
             print(f"  CV 5 folds...")

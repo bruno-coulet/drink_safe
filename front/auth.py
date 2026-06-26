@@ -25,17 +25,31 @@ ADMIN_ANALYSTE_API_KEY: str = os.getenv("ADMIN_ANALYSTE_API_KEY", "")
 ADMIN_EXPLOITATION_API_KEY: str = os.getenv("ADMIN_EXPLOITATION_API_KEY", "")
 
 
-def _valider_cle_client(api_key: str) -> bool:
-    """Vérifie qu'une clé API client est valide en interrogeant FastAPI."""
+# def _valider_cle_client(api_key: str) -> bool:
+#     """Vérifie qu'une clé API client est valide en interrogeant FastAPI."""
+#     try:
+#         resp = requests.get(
+#             f"{API_BASE_URL}/measurements",
+#             headers={"X-API-Key": api_key},
+#             timeout=5,
+#         )
+#         return resp.status_code == 200
+#     except requests.RequestException:
+#         return False
+
+def _valider_cle_client(api_key: str) -> dict | None:
+    """Vérifie qu'une clé API client est valide et récupère ses données (RGPD)."""
     try:
         resp = requests.get(
-            f"{API_BASE_URL}/measurements",
+            f"{API_BASE_URL}/clients/me",
             headers={"X-API-Key": api_key},
             timeout=5,
         )
-        return resp.status_code == 200
+        if resp.status_code == 200:
+            return resp.json() # Retourne un dictionnaire (ex: {"client_id": "...", "nom_structure": "..."})
+        return None
     except requests.RequestException:
-        return False
+        return None
 
 
 def _verifier_mot_de_passe(mdp_saisi: str, hash_env: str) -> bool:
@@ -59,16 +73,32 @@ def login():
         role = request.form.get("role", "client")
         credential = request.form.get("credential", "").strip()
 
+
         if not credential:
             flash("Identifiant ou mot de passe manquant.", "danger")
             return render_template("login.html")
 
+        # if role == "client":
+        #     if _valider_cle_client(credential):
+        #         session["role"] = "client"
+        #         session["api_key"] = credential
+        #         return redirect(url_for("client.dashboard"))
+        #     flash("Clé API invalide ou révoquée.", "danger")
+
         if role == "client":
-            if _valider_cle_client(credential):
+            donnees_client = _valider_cle_client(credential)
+
+            if donnees_client is not None:
                 session["role"] = "client"
                 session["api_key"] = credential
+                # On stocke les informations récupérées dans la session Flask
+                session["client_id"] = donnees_client.get("client_id", "ID inconnu")
+                session["nom_structure"] = donnees_client.get("nom_structure", "Client")
+
                 return redirect(url_for("client.dashboard"))
+
             flash("Clé API invalide ou révoquée.", "danger")
+
 
         elif role == "analyste":
             if _verifier_mot_de_passe(credential, ADMIN_ANALYSTE_HASH) and ADMIN_ANALYSTE_API_KEY:

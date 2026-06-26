@@ -12,14 +12,20 @@ Description : Routes API pour l'enregistrement, la consultation et la
 
 import secrets
 from typing import Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, Field
 import psycopg2
+from psycopg2.extras import RealDictCursor
 
 from src.config import settings
 from src.dependencies.auth import get_current_client, hacher_cle
 
+# Initialisation du routeur pour les clients
 router = APIRouter(prefix="/clients", tags=["Clients & Sécurité"])
+
+# Définition de l'en-tête de sécurité attendu (exigé par la spec technique)
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
 
 class ClientCreate(BaseModel):
@@ -280,3 +286,36 @@ def regenerer_cle_api(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur BDD : {str(e)}"
         )
+
+
+@router.get("/me")
+def get_mon_profil(api_key: str = Security(api_key_header)) -> Dict[str, Any]:
+    """Retourne les informations de profil du client authentifié (RGPD — User Story #5).
+
+    Args:
+        api_key: Clé API brute extraite du header X-API-Key.
+
+    Returns:
+        Dictionnaire avec client_id et nom_structure.
+
+    Raises:
+        HTTPException: 401 si la clé est absente ou invalide, 500 sur erreur BDD.
+    """
+    try:
+        with psycopg2.connect(settings.DATABASE_URL) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    "SELECT client_id, denomination AS nom_structure FROM clients WHERE api_key = %s;",
+                    (hacher_cle(api_key),),
+                )
+                client = cursor.fetchone()
+
+        if not client:
+            raise HTTPException(status_code=401, detail="Clé API invalide ou introuvable.")
+
+        return dict(client)
+
+    except HTTPException:
+        raise
+    except psycopg2.Error as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne de la base de données : {e}")

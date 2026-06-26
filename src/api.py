@@ -40,6 +40,7 @@ requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 # -----------------------------------------------------------
 
 
+
 # Configuration globale de la connexion à MLflow
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 
