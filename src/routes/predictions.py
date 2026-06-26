@@ -175,10 +175,14 @@ def _comparer_modeles(payload: WaterSample) -> Dict[str, Any]:
             "model_version": version_modele,
         })
 
-    votes_potable: int = sum(d["prediction"] for d in details)
+    # votes_potable: int = sum(d["prediction"] for d in details)
+    # votes_total: int = len(details)
+    # CORRECTION : On compte uniquement les occurrences où la prédiction est 1
+    votes_potable: int = sum(1 for d in details if d["prediction"] == 1)
     votes_total: int = len(details)
+
     # Vote majoritaire ; égalité -> principe de précaution (Non Potable)
-    prediction_consensus: int = 1 if votes_potable > votes_total / 2 else 0
+    prediction_consensus: int = 1 if votes_potable > (votes_total / 2) else 0
 
     return {
         "prediction_consensus": prediction_consensus,
@@ -187,7 +191,7 @@ def _comparer_modeles(payload: WaterSample) -> Dict[str, Any]:
         "votes_total": votes_total,
         "decision_reason": None,
         "details": details,
-        "model_ver": f"Consensus {votes_potable}/{votes_total} modeles",
+        "model_ver": f"Consensus {votes_potable}/{votes_total} models",
     }
 
 
