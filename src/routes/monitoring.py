@@ -12,11 +12,18 @@ Endpoints :
 """
 
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 import psycopg2
+from psycopg2.extras import RealDictCursor
+from typing import Dict, Any, List
 
 from src.config import settings
 from src.dependencies.auth import get_current_client
+
+
+
+
+
 
 router = APIRouter(prefix="/monitoring", tags=["Monitoring & Supervision"])
 
@@ -120,3 +127,53 @@ def metriques_agregees(
         "clients_actifs": clients,
         "top_endpoints": top_endpoints,
     }
+
+
+
+
+@router.get("/stats")
+def get_monitoring_stats() -> Dict[str, Any]:
+    """Retourne les indicateurs de santé (KPI) pour le Responsable d'Exploitation."""
+    try:
+        conn = psycopg2.connect(settings.DATABASE_URL)
+        # RealDictCursor permet de renvoyer directement un dictionnaire (clé: valeur)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Calcul du temps moyen, total des requêtes, et nombre d'erreurs (HTTP >= 400)
+        cursor.execute("""
+            SELECT
+                COUNT(*) as total_requests,
+                COALESCE(ROUND(AVG(execution_duration_ms), 2), 0) as avg_time_ms,
+                COUNT(*) FILTER (WHERE status_code >= 400) as total_errors
+            FROM action_logs;
+        """)
+        stats = cursor.fetchone()
+        conn.close()
+
+        total_req = stats["total_requests"]
+        error_rate = round((stats["total_errors"] / total_req * 100), 2) if total_req > 0 else 0.0
+
+        return {
+            "total_requests": total_req,
+            "average_response_time_ms": stats["avg_time_ms"],
+            "total_errors": stats["total_errors"],
+            "error_rate_percent": error_rate
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur de lecture des statistiques: {e}")
+
+@router.get("/logs")
+def get_audit_logs(limit: int = 50) -> List[Dict[str, Any]]:
+    """Retourne les journaux d'accès pour l'Audit Trail."""
+    try:
+        conn = psycopg2.connect(settings.DATABASE_URL)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # On récupère les derniers logs par ordre anti-chronologique
+        cursor.execute("SELECT * FROM action_logs ORDER BY id DESC LIMIT %s", (limit,))
+        logs = cursor.fetchall()
+        conn.close()
+
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur de lecture des logs: {e}")
