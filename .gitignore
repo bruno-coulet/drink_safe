@@ -17,8 +17,7 @@ wheels/
 data/*
 temp/*
 
-
-
+.vscode/settings.json
 
 # Asssitants IA
 CLAUDE.md

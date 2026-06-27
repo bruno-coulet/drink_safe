@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Drink safe
+Projet : Waterflow 2
 Composant : Configuration Centralisée de l'API Unique
 Description : Gestion dynamique des configurations selon le contexte d'exécution
               (Local vs Docker) pour PostgreSQL et le tracking MLflow.
@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import psycopg2
-
 
 ROOT_DIR: Path = Path(__file__).resolve().parents[1]
 
@@ -69,6 +68,7 @@ def init_db() -> None:
         """
         CREATE TABLE IF NOT EXISTS clients (
             client_id VARCHAR(50) PRIMARY KEY,
+            role VARCHAR(20) DEFAULT 'client',
             denomination VARCHAR(100) NOT NULL,
             adresse TEXT,
             api_key VARCHAR(100) UNIQUE NOT NULL,

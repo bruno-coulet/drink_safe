@@ -37,12 +37,14 @@ ADMIN_EXPLOITATION_API_KEY = os.getenv("ADMIN_EXPLOITATION_API_KEY", "")
 COMPTES = [
     {
         "client_id": "ADMIN_ANALYSTE",
+        "role": "analyste",
         "denomination": "Compte technique — Analyste Qualité",
         "adresse": "Interne plateforme",
         "api_key": ADMIN_ANALYSTE_API_KEY,
     },
     {
         "client_id": "ADMIN_EXPLOITATION",
+        "role": "exploitation",
         "denomination": "Compte technique — Responsable Exploitation",
         "adresse": "Interne plateforme",
         "api_key": ADMIN_EXPLOITATION_API_KEY,
@@ -60,10 +62,11 @@ def seed() -> None:
         sys.exit(1)
 
     query = """
-        INSERT INTO clients (client_id, denomination, adresse, api_key)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO clients (client_id, role, denomination, adresse, api_key)
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (client_id) DO UPDATE
             SET api_key = EXCLUDED.api_key,
+                role = EXCLUDED.role,
                 denomination = EXCLUDED.denomination;
     """
 
@@ -74,6 +77,7 @@ def seed() -> None:
                     query,
                     (
                         compte["client_id"],
+                        compte["role"],
                         compte["denomination"],
                         compte["adresse"],
                         _hacher_cle(compte["api_key"]),

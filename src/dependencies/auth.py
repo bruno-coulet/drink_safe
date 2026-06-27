@@ -35,6 +35,8 @@ def hacher_cle(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()
 
 
+
+
 def get_current_client(request: Request, api_key: str = Security(api_key_header)) -> str:
     """Valide la clé API fournie et retourne l'identifiant du client associé.
 
@@ -82,3 +84,6 @@ def get_current_client(request: Request, api_key: str = Security(api_key_header)
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur interne lors de la vérification des droits : {str(e)}"
         )
+
+
+
