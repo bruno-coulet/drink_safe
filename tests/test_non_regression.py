@@ -32,6 +32,9 @@ def ensure_models_are_loaded():
         except Exception:
             pass
 
+
+# Décorateur pour ignorer le test si le dataset de validation standardisé n'est pas présent sur github
+@pytest.mark.skipif(not os.path.exists("data/processed/water_std.csv"), reason="Dataset ignoré sur Git (CI)")
 def test_non_regression_performance_catalogue() -> None:
     """S'assure que les modèles actifs maintiennent un score F1 minimal de 60% et un AUC-PR minimal de 50%."""
     # 1. Vérification de l'existence du dataset de validation standardisé

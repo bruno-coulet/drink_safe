@@ -17,6 +17,7 @@ from src.config import settings
 from src.api import app
 import unittest.mock as mock
 
+
 # Instanciation du client de test FastAPI
 client = TestClient(app)
 
@@ -122,51 +123,70 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
 
     conn.close()
 
-    # # ==========================================
-    # # ÉTAPE 4 : Inférence par consensus des 4 modèles
-    # # ==========================================
+    # ==========================================
+    # ÉTAPE 4 : Inférence par consensus des 4 modèles
+    # ==========================================
 
-    # On simule le module mlflow injecté dans votre route de prédiction
-    with mock.patch("src.routes.predictions.mlflow") as mock_mlflow:
+    # # On simule le module mlflow injecté dans votre route de prédiction
+    # with mock.patch("src.routes.predictions.mlflow") as mock_mlflow:
 
-        # 1. On crée un faux modèle IA qui prédit toujours "1" (Potable)
+    #     # 1. On crée un faux modèle IA qui prédit toujours "1" (Potable)
+    #     faux_modele = mock.MagicMock()
+    #     faux_modele.predict.return_value = [2]
+
+    #     # 2. On indique à MLflow de renvoyer ce faux modèle, peu importe l'algorithme demandé
+    #     mock_mlflow.sklearn.load_model.return_value = faux_modele
+    #     mock_mlflow.xgboost.load_model.return_value = faux_modele
+    #     mock_mlflow.pyfunc.load_model.return_value = faux_modele
+
+    #     # 3. On sollicite la prédiction par consensus sur l'API
+    #     response_predict = client.post(f"/api/predict/from-prelevement/{prelevement_id}", headers=headers)
+
+    #     # DEBUG (optionnel)
+    #     print("DÉTAIL PREDICT :", response_predict.text)
+
+    #     # 4. Assertions de réussite
+    #     assert response_predict.status_code in [200, 201]
+
+
+    #     predict_data = response_predict.json()
+    #     # On vérifie la clé réelle renvoyée par l'API
+    #     # assert "prediction_potability" in predict_data
+    #     # assert predict_data["prediction_potability"] == 1
+    #     # Vérifie la clé réelle du consensus renvoyée par l'API : "prediction_consensus" au lieu de "prediction_potability"
+    #     assert "prediction_consensus" in predict_data
+    #     assert predict_data["prediction_consensus"] == 1
+
+    #     # 2. On vérifie que les 4 modèles ont bien été appelés dans les détails
+    #     assert "details" in predict_data
+    #     assert len(predict_data["details"]) == 4
+
+
+
+
+    # Simule la fonction interne pour couper tout lien avec MLflow
+    with mock.patch("src.routes.predictions._charger_modele") as mock_charger_modele:
+
+        # 1. On crée un faux modèle IA qui prédit "1" (Potable)
         faux_modele = mock.MagicMock()
-        faux_modele.predict.return_value = [2]
+        faux_modele.predict.return_value = [1]
 
-        # 2. On indique à MLflow de renvoyer ce faux modèle, peu importe l'algorithme demandé
-        mock_mlflow.sklearn.load_model.return_value = faux_modele
-        mock_mlflow.xgboost.load_model.return_value = faux_modele
-        mock_mlflow.pyfunc.load_model.return_value = faux_modele
+        # 2. La fonction _charger_modele renvoie toujours (le_modele, "v_mock")
+        mock_charger_modele.return_value = (faux_modele, "v_mock")
 
-        # 3. On sollicite la prédiction par consensus sur l'API
+        # 3. On sollicite la prédiction sur l'API
         response_predict = client.post(f"/api/predict/from-prelevement/{prelevement_id}", headers=headers)
 
-        # DEBUG (optionnel)
-        print("DÉTAIL PREDICT :", response_predict.text)
-
-        # 4. Assertions de réussite
+        # 4. Assertions
         assert response_predict.status_code in [200, 201]
-
-
         predict_data = response_predict.json()
-        # On vérifie la clé réelle renvoyée par l'API
-        # assert "prediction_potability" in predict_data
-        # assert predict_data["prediction_potability"] == 1
-        # Vérifie la clé réelle du consensus renvoyée par l'API : "prediction_consensus" au lieu de "prediction_potability"
+
         assert "prediction_consensus" in predict_data
         assert predict_data["prediction_consensus"] == 1
-
-        # 2. On vérifie que les 4 modèles ont bien été appelés dans les détails
         assert "details" in predict_data
         assert len(predict_data["details"]) == 4
 
-        # Supprimez ou commentez les assertions sur "models_predictions"
-        # si votre API ne renvoie pas le détail des 4 modèles.
-        # assert "consensus" in predict_data
-        # # Nos 4 faux modèles ont tous voté 1, le consensus doit donc être 1
-        # assert predict_data["consensus"] == 1
-        # assert "models_predictions" in predict_data
-        # assert len(predict_data["models_predictions"]) == 4
+
 
 
 
