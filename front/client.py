@@ -12,7 +12,11 @@ import os
 import requests
 from functools import wraps
 from typing import Any, Callable, Dict, Optional
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for, Response
+import csv
+from io import StringIO
+
+
 
 client_bp = Blueprint("client", __name__, template_folder="templates")
 
@@ -30,7 +34,6 @@ def role_requis(role: str) -> Callable:
             return f(*args, **kwargs)
         return wrapper
     return decorateur
-
 
 @client_bp.route("/")
 @role_requis("client")
@@ -51,7 +54,6 @@ def dashboard():
         "client/dashboard.html",
         client=donnees_client
     )
-
 
 @client_bp.route("/predict", methods=["POST"])
 @role_requis("client")
@@ -90,7 +92,6 @@ def predict():
         erreur=erreur,
         form_values=request.form,
     )
-
 
 @client_bp.route("/ocr", methods=["POST"])
 @role_requis("client")
@@ -134,3 +135,42 @@ def ocr():
         resultat_pred=resultat_pred,
         erreur=erreur,
     )
+
+
+@client_bp.route("/export-rgpd")
+def export_data():
+    """Génère un export CSV des données personnelles du client (Conformité RGPD)."""
+    api_key = session.get("api_key")
+    if not api_key:
+        return redirect(url_for("auth.login"))
+
+    # 1. On interroge l'API FastAPI pour récupérer les données du client
+    url_api = "http://127.0.0.1:8000/api/measurements"
+    reponse = requests.get(url_api, headers={"X-API-Key": api_key})
+
+    if reponse.status_code == 200:
+        prelevements = reponse.json()
+
+        # 2. Création d'un fichier CSV en mémoire
+        si = StringIO()
+        writer = csv.writer(si)
+
+        # S'il y a des données, on écrit les en-têtes puis les lignes
+        if prelevements and isinstance(prelevements, list) and len(prelevements) > 0:
+            # En-têtes basées sur les clés du premier dictionnaire
+            writer.writerow(prelevements[0].keys())
+            for p in prelevements:
+                writer.writerow(p.values())
+        else:
+            writer.writerow(["Aucune donnee associee a ce compte."])
+
+        # 3. LA PARTIE MANQUANTE : On crée la réponse et on la retourne !
+        output = Response(si.getvalue(), mimetype="text/csv")
+        output.headers["Content-Disposition"] = "attachment; filename=mes_donnees_waterflow.csv"
+        return output
+
+    else:
+        flash("Erreur lors de la récupération de vos données.", "danger")
+        return redirect(url_for("client.dashboard"))
+
+

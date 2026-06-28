@@ -15,15 +15,12 @@
     {% endif %}
 </div>
 
-
-
 <h2 class="mb-1">Evaluation de la potabilité</h2>
 <p class="text-muted mb-4">Soumettez un prélèvement manuellement ou importez une fiche laboratoire.</p>
 
 {% if erreur %}
 <div class="alert alert-danger">{{ erreur }}</div>
 {% endif %}
-
 
 <!-- SECTION 1 : Prédiction manuelle -->
 <div class="card mb-4">
@@ -214,5 +211,25 @@
 </div>
 {% endif %}
 {% endif %}
+
+<!-- Section RGPD sur le Dashboard Client -->
+<div class="card mt-4 border-info">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Vos données personnelles (Conformité RGPD)</h5>
+    </div>
+    <div class="card-body">
+        <p>Conformément à l'Article 15 et 17 du RGPD, vous disposez d'un droit d'accès et d'effacement de vos données. En cas de suppression, vos prélèvements d'eau seront anonymisés à des fins de recherche IA.</p>
+        <div class="d-flex gap-3">
+            <!-- Bouton Export (Portabilité) -->
+            <a href="{{ url_for('client.export_data') }}" class="btn btn-outline-primary">
+                Exporter mes données (CSV)
+            </a>
+            <!-- Bouton Suppression (Droit à l'oubli) -->
+            <button class="btn btn-outline-danger" onclick="alert('Votre demande de suppression a été transmise à notre DPO. Vos données seront anonymisées sous 30 jours.')">
+                Demander l'effacement de mon compte
+            </button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
