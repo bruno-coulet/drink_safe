@@ -9,9 +9,13 @@ from typing import Any, Dict
 import pytest
 from fastapi.testclient import TestClient
 from src.api import app
+from src.dependencies.auth import get_admin_user
 
 # Instanciation du client de test FastAPI
 client = TestClient(app)
+# Court-circuite le verrou administrateur uniquement pendant les tests automatisés
+# pour autoriser la création de clients de test.
+app.dependency_overrides[get_admin_user] = lambda: "bouchon_admin_test"
 
 def test_schema_validation_clients_manquant() -> None:
     """Vérifie que l'API lève une erreur 422 si le corps de la requête clients est incomplet."""
@@ -59,7 +63,7 @@ def test_garde_fou_oms_ph_acide() -> None:
     # On simule l'appel avec une clé d'administration ou une clé de test pour passer la sécurité
     headers = {"X-API-Key": "test_admin_key"}
     response = client.post("/api/predict", json=payload_critique, headers=headers)
-    
+
     # Si non authentifié avec cette clé de test fictive, on s'attend à 401 ou à la réponse du mock
     # Pour un test unitaire pur, on vérifie que la logique métier de potabilité retourne False
     if response.status_code == 200:

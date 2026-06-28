@@ -11,7 +11,7 @@ Description : Routes API pour l'enregistrement, la consultation et la
 """
 
 import secrets
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Security
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, Field
@@ -19,7 +19,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from src.config import settings
-from src.dependencies.auth import get_current_client, hacher_cle
+from src.dependencies.auth import get_current_client, hacher_cle, get_admin_user
+
 
 # Initialisation du routeur pour les clients
 router = APIRouter(prefix="/clients", tags=["Clients & Sécurité"])
@@ -33,60 +34,69 @@ class ClientCreate(BaseModel):
     client_id: str = Field(..., max_length=50, description="Identifiant unique du client (ex: LOR_EAU_01)")
     denomination: str = Field(..., max_length=100, description="Nom officiel ou raison sociale de l'entité")
     adresse: str = Field(..., description="Adresse postale complète du client")
+    role: Optional[str] = "client" # Par défaut, on crée un client normal
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def inscrire_nouveau_client(payload: ClientCreate) -> Dict[str, Any]:
-    """Inscrit un client en base de données et lui génère une clé API unique.
+def creer_client(
+    payload: ClientCreate,             # données du profil (JSON)
+    _: str = Depends(get_admin_user)   # cadenas de sécurité administrateur
+    ) -> Dict[str, Any]:
 
-    La clé brute est retournée une seule fois dans la réponse et n'est jamais
-    persistée en clair — seul son hash SHA-256 est stocké en BDD.
+    """Inscrit un profil (Client, Analyste, Exploitation) et génère sa clé API unique.
 
-    Args:
-        payload: Données d'inscription validées par Pydantic.
-
-    Returns:
-        Confirmation contenant la clé API brute (à conserver, affichée une fois).
+    La clé brute est retournée une seule fois dans la réponse.
+    Seul son hash SHA-256 est stocké en BDD.
     """
+    # Génération avec le préfixe de l'ancien code (très bonne pratique)
     cle_brute: str = f"wf_live_{secrets.token_urlsafe(32)}"
-
-    query_insert: str = """
-    INSERT INTO clients (client_id, denomination, adresse, api_key)
-    VALUES (%s, %s, %s, %s);
-    """
+    # Hashage de la clé
+    cle_hachee = hacher_cle(cle_brute)
 
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
-                cursor.execute(query_insert, (
-                    payload.client_id,
-                    payload.denomination,
-                    payload.adresse,
-                    hacher_cle(cle_brute),
-                ))
-                conn.commit()
-
-        return {
-            "status": "Succès",
-            "message": "Client enregistré. Conservez cette clé — elle ne sera plus affichée.",
-            "client_id": payload.client_id,
-            "api_key": cle_brute,
-        }
-
-    except psycopg2.errors.UniqueViolation:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"L'identifiant '{payload.client_id}' existe déjà."
-        )
+                cursor.execute(
+                    """
+                    INSERT INTO clients (client_id, denomination, adresse, role, api_key)
+                    VALUES (%s, %s, %s, %s, %s);
+                    """,
+                    (payload.client_id, payload.denomination, payload.adresse, payload.role, cle_hachee)
+                )
+            conn.commit()
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur BDD : {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Erreur d'insertion : {str(e)}")
 
+    # 4. Retourne la clé en clair à Flask pour l'affichage à l'écran
+    return {
+        "message": "Compte client créé avec succès.",
+        "client_id": payload.client_id,
+        "api_key": cle_brute
+    }
+
+    # try:
+    #     with psycopg2.connect(settings.DATABASE_URL) as conn:
+    #         with conn.cursor() as cursor:
+    #             cursor.execute(query_insert, (
+    #                 payload.client_id,
+    #                 payload.role,           # <== Le fameux rôle !
+    #                 payload.denomination,
+    #                 payload.adresse,
+    #                 hacher_cle(cle_brute),  # <== L'appel à la fonction centralisée
+    #             ))
+    #             conn.commit()
+    # except Exception as e:
+    #     # Pensez à gérer l'erreur (ex: doublon d'ID)
+    #     raise HTTPException(status_code=400, detail=f"Erreur d'insertion : {str(e)}")
+
+    # return {
+    #     "message": f"Compte {payload.role} créé avec succès.",
+    #     "client_id": payload.client_id,
+    #     "api_key": cle_brute  # La clé en clair, affichée une seule fois
+    # }
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def lister_clients() -> Dict[str, Any]:
+def lister_clients(_: str = Depends(get_admin_user)) -> Dict[str, Any]:
     """Récupère la liste de tous les clients enregistrés (vue administrateur)."""
     query_select: str = "SELECT client_id, denomination, adresse, cree_le FROM clients;"
 
@@ -117,28 +127,23 @@ def lister_clients() -> Dict[str, Any]:
         )
 
 
+# article 17 du RGPD (Droit à l'effacement des données personnelles
+# Conservation des features pour l'apprentissage
 @router.delete("/{client_id}", status_code=status.HTTP_200_OK)
 def supprimer_client(
     client_id: str,
-    _: str = Depends(get_current_client),
+    _: str = Depends(get_admin_user),  # Sécurisation de la route
 ) -> Dict[str, Any]:
-    """Supprime un client et l'ensemble de ses données associées.
+    """Supprime un client et anonymise ses prélèvements (Conformité RGPD).
 
-    Les prélèvements liés sont supprimés en cascade (contrainte FK).
-    Les journaux d'accès (action_logs) sont conservés pour l'audit RGPD.
-
-    Args:
-        client_id: Identifiant du client à supprimer.
-
-    Returns:
-        Confirmation de suppression avec le nombre de prélèvements supprimés.
-
-    Raises:
-        HTTPException: 404 si le client n'existe pas.
+    Les DCP (Données à Caractère Personnel) du client sont supprimées.
+    Les prélèvements liés sont anonymisés (client_id = NULL) pour continuer d'entrainer l'IA.
+    Les journaux d'accès (action_logs) sont conservés pour l'audit.
     """
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
+                # 1. Vérifier si le client existe
                 cursor.execute(
                     "SELECT client_id FROM clients WHERE client_id = %s;",
                     (client_id,)
@@ -149,17 +154,21 @@ def supprimer_client(
                         detail=f"Client '{client_id}' introuvable."
                     )
 
+                # 2. Compter les prélèvements pour le rapport
                 cursor.execute(
                     "SELECT COUNT(*) FROM prelevements WHERE client_id = %s;",
                     (client_id,)
                 )
                 row = cursor.fetchone()
-                nb_prelevements: int = row[0] if row else 0
+                nb_prelevements: int = row if row else 0
 
+                # 3. CORRECTION 2 : Anonymisation des prélèvements au lieu de la suppression !
                 cursor.execute(
-                    "DELETE FROM prelevements WHERE client_id = %s;",
+                    "UPDATE prelevements SET client_id = NULL WHERE client_id = %s;",
                     (client_id,)
                 )
+
+                # 4. Suppression du compte client (Effacement des DCP)
                 cursor.execute(
                     "DELETE FROM clients WHERE client_id = %s;",
                     (client_id,)
@@ -169,8 +178,8 @@ def supprimer_client(
         return {
             "status": "Succès",
             "client_id": client_id,
-            "prelevements_supprimes": nb_prelevements,
-            "note": "Les journaux d'accès sont conservés pour l'audit RGPD.",
+            "prelevements_anonymises": nb_prelevements,
+            "note": "Les données personnelles sont supprimées. Prélèvements anonymisés pour l'IA (RGPD).",
         }
 
     except HTTPException:
@@ -182,101 +191,46 @@ def supprimer_client(
         )
 
 
-def _verifier_client_existe(cursor: Any, client_id: str) -> None:  # type: ignore[type-arg]
-    """Lève une 404 si le client_id n'existe pas en BDD."""
-    cursor.execute("SELECT 1 FROM clients WHERE client_id = %s;", (client_id,))
-    if cursor.fetchone() is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Client '{client_id}' introuvable."
-        )
-
-
-@router.delete("/{client_id}/api-key", status_code=status.HTTP_200_OK)
-def revoquer_cle_api(
-    client_id: str,
-    _: str = Depends(get_current_client),
-) -> Dict[str, Any]:
-    """Révoque immédiatement la clé API d'un client compromis.
-
-    La clé est remplacée par un marqueur non fonctionnel unique — le client
-    ne peut plus s'authentifier jusqu'à régénération via POST /{client_id}/api-key.
-    Les données et journaux sont intégralement conservés.
-
-    Args:
-        client_id: Identifiant du client dont la clé doit être révoquée.
-
-    Returns:
-        Confirmation de révocation.
-
-    Raises:
-        HTTPException: 404 si le client n'existe pas.
-    """
-    marqueur_revocation: str = f"REVOQUE_{client_id}"
-
-    try:
-        with psycopg2.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cursor:
-                _verifier_client_existe(cursor, client_id)
-                cursor.execute(
-                    "UPDATE clients SET api_key = %s WHERE client_id = %s;",
-                    (marqueur_revocation, client_id),
-                )
-                conn.commit()
-
-        return {
-            "status": "Révoquée",
-            "client_id": client_id,
-            "message": "Clé API révoquée. Le client ne peut plus s'authentifier.",
-            "action_suivante": f"POST /api/clients/{client_id}/api-key pour régénérer.",
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur BDD : {str(e)}"
-        )
-
-
-@router.post("/{client_id}/api-key", status_code=status.HTTP_201_CREATED)
+@router.post("/{client_id}/regenerate-key", status_code=status.HTTP_200_OK)
 def regenerer_cle_api(
     client_id: str,
-    _: str = Depends(get_current_client),
+    _: str = Depends(get_admin_user),  # <== Sécurisé pour l'admin
 ) -> Dict[str, Any]:
-    """Génère une nouvelle clé API pour un client existant.
+    """Régénère la clé API d'un client (révoque automatiquement l'ancienne).
 
-    Invalide automatiquement l'ancienne clé (révoquée ou active) en la
-    remplaçant par le hash de la nouvelle. La clé brute est retournée
-    une seule fois — elle ne sera plus récupérable ensuite.
-
-    Args:
-        client_id: Identifiant du client pour lequel régénérer la clé.
-
-    Returns:
-        Nouvelle clé API brute (à transmettre au client, affichée une fois).
-
-    Raises:
-        HTTPException: 404 si le client n'existe pas.
+    En cas de compromission, l'administrateur génère une nouvelle clé.
+    L'ancienne clé est instantanément écrasée en BDD.
+    La nouvelle clé brute est retournée une seule fois.
     """
-    nouvelle_cle: str = f"wf_live_{secrets.token_urlsafe(32)}"
+    # 1. Génération de la nouvelle clé avec notre standard
+    nouvelle_cle_brute: str = f"wf_live_{secrets.token_urlsafe(32)}"
 
     try:
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
-                _verifier_client_existe(cursor, client_id)
+                # 2. Vérification de l'existence du profil
+                cursor.execute(
+                    "SELECT client_id FROM clients WHERE client_id = %s;",
+                    (client_id,)
+                )
+                if cursor.fetchone() is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Client '{client_id}' introuvable."
+                    )
+
+                # 3. Écrasement (Révocation de fait) par le nouveau Hash
                 cursor.execute(
                     "UPDATE clients SET api_key = %s WHERE client_id = %s;",
-                    (hacher_cle(nouvelle_cle), client_id),
+                    (hacher_cle(nouvelle_cle_brute), client_id),
                 )
                 conn.commit()
 
         return {
-            "status": "Régénérée",
+            "status": "Succès",
+            "message": "Clé API régénérée. L'ancienne clé est révoquée et ne fonctionnera plus.",
             "client_id": client_id,
-            "api_key": nouvelle_cle,
-            "message": "Nouvelle clé générée. L'ancienne est immédiatement invalide. Conservez cette clé.",
+            "nouvelle_api_key": nouvelle_cle_brute
         }
 
     except HTTPException:
@@ -286,6 +240,7 @@ def regenerer_cle_api(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur BDD : {str(e)}"
         )
+
 
 
 @router.get("/me")

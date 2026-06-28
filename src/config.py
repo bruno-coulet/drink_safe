@@ -57,10 +57,8 @@ class Settings:
     # --- Configuration Dynamique MLflow ---
     MLFLOW_TRACKING_URI: str = "http://mlflow:5000" if IS_DOCKER else "http://127.0.0.1:5000"
 
-
 # Instanciation unique (Pattern Singleton)
 settings = Settings()
-
 
 def init_db() -> None:
     """Crée les tables SQL requises si elles n'existent pas encore en BDD."""
@@ -109,9 +107,23 @@ def init_db() -> None:
         );
         """
     ]
-    with psycopg2.connect(settings.DATABASE_URL) as conn:
-        with conn.cursor() as cursor:
-            for query in queries:
-                cursor.execute(query)
-            conn.commit()
-    print("[SQL] Tables de l'API Unique initialisées avec succès.")
+
+    try:
+        # Ouvre la connexion et le curseur
+        with psycopg2.connect(settings.DATABASE_URL) as conn:
+            with conn.cursor() as cursor:
+
+                # COMMANDES PYTHON DE NETTOYAGE EN CAS DE BESOIN
+                # cursor.execute("DROP TABLE IF EXISTS action_logs CASCADE;")
+                # cursor.execute("DROP TABLE IF EXISTS prelevements CASCADE;")
+                # cursor.execute("DROP TABLE IF EXISTS clients CASCADE;")
+
+                # Boucle sur la liste pour exécuter chaque création de table
+                for query in queries:
+                    cursor.execute(query)
+
+                conn.commit()
+        print("[SQL] Tables de l'API Unique initialisées avec succès.")
+
+    except Exception as e:
+        print(f"Erreur lors de l'initialisation de la BDD : {e}")

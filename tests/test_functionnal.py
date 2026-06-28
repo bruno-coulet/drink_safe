@@ -17,6 +17,9 @@ from src.config import settings
 from src.api import app
 import unittest.mock as mock
 
+# Initialisation de la base de données pour les tests
+from src.config import init_db
+init_db()
 
 # Instanciation du client de test FastAPI
 client = TestClient(app)

@@ -9,7 +9,7 @@
                 <h4 class="mb-0">Drink Safe — Connexion</h4>
             </div>
             <div class="card-body p-4">
-                <form method="POST" action="{{ url_for('auth.login') }}">
+                <!-- <form method="POST" action="{{ url_for('auth.login') }}">
 
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Profil</label>
@@ -43,7 +43,38 @@
                     <div class="d-grid">
                         <button type="submit" class="btn btn-dark">Accéder</button>
                     </div>
-                </form>
+                </form> -->
+                <form action="{{ url_for('auth.login') }}" method="POST">
+
+                <!-- Champ 1 : Le Rôle (Boutons radio alignés) -->
+                <div class="mb-4">
+                    <label class="form-label d-block fw-bold">Profil de connexion</label>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="role" id="role_client" value="client" checked>
+                        <label class="form-check-label" for="role_client">Client Final</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="role" id="role_analyste" value="analyste">
+                        <label class="form-check-label" for="role_analyste">Analyste Qualité</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="role" id="role_exploitation" value="exploitation">
+                        <label class="form-check-label" for="role_exploitation">Responsable d'Exploitation</label>
+                    </div>
+                </div>
+
+            <!-- Champ 2 : Le "Credential" unique (Clé API ou Mot de passe) -->
+            <div class="mb-3">
+                <label for="credential" class="form-label fw-bold">Clé API (Client) ou Mot de passe (Admin)</label>
+                <input type="password" class="form-control" id="credential" name="credential" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+        </form>
+
             </div>
             <div class="card-footer text-muted text-center small py-2">
                 Les admins (Analyste / Exploitation) saisissent leur mot de passe de service.
