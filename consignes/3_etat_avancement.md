@@ -22,8 +22,29 @@ Tous les conteneurs sont configurés et fonctionnels sous Docker Compose :
 ## 4. Statut du Frontend Flask
 * L'interface graphique a été entièrement développée et connectée aux différents modules de l'API.
 
-## 5. Backlog Technique Restant (Mise à jour)
-- [x] **Intégration continue (CI) :** Scripts PyTest corrigés à 100% (Mock MLOps), pipeline `.github/workflows/ci.yml` opérationnelle au prochain push.
-- [x] **Audit Trail & Monitoring :** Routes implémentées (`/api/monitoring/stats` et `/logs`) pour la restitution des KPI (temps de réponse, taux d'erreurs) au Responsable d'Exploitation.
-- [ ] **Déploiement continu (CD) :** [Optionnel] Configurer le pipeline GitHub Actions pour automatiser le build et le push de l'image sur DockerHub ou le déploiement sur VPS.
-- [ ] **Nettoyage final :** Relecture globale de la documentation et du README.md pour la sou
+
+## 5. API Data & Gouvernance des Accès (Sécurité)
+*   **Authentification par Clé API :** Mise en place d'une sécurité stricte basée sur l'en-tête `X-API-Key`, garantissant le cloisonnement des données (Multi-Tenancy RGPD) pour chaque client.
+*   **Gestion des entités (Admin) :** Finalisation de la route `POST /api/clients`. Le système génère désormais une clé API unique de manière cryptographique, ne stocke que son empreinte (hachage SHA-256) dans PostgreSQL, et renvoie la clé en clair une unique fois à l'IHM pour le Responsable d'Exploitation.
+*   **Amorçage de la base :** Implémentation du script `seed_admins.py` permettant l'injection automatisée des profils administrateurs initiaux en base de données.
+
+## 6. API OCR & Ingestion Automatisée (User Story #2)
+*   **Intégration du service externe :** La route `POST /api/ocr/lab-report` est pleinement opérationnelle. Elle réceptionne des fichiers binaires (PDF/Images) via des requêtes `multipart/form-data` et communique avec l'API tierce *OCR.space*.
+*   **Persistance relationnelle :** Les mesures physico-chimiques extraites du texte brut sont automatiquement insérées dans la table `prelevements` de PostgreSQL sous la provenance "OCR". Le système respecte de manière stricte les contraintes d'intégrité (clé étrangère `client_id`).
+
+## 7. Interface Web Expert (Frontend Flask)
+*   **Gestion des Profils :** Mise en place d'un système de connexion multi-rôles robuste (boutons radio) orientant vers des tableaux de bord spécifiques (Client Final, Analyste Qualité, Responsable d'Exploitation).
+*   **Interconnexion avec FastAPI :** Le frontend communique désormais avec succès avec l'API Unique pour la soumission des prédictions, le téléversement des fiches laboratoires (OCR) et la création de nouveaux clients.
+
+## 8. Tests et Intégration Continue (CI)
+*   **Suite de tests PyTest :** Le projet intègre une couverture de tests automatisés structurée en trois niveaux :
+    *   `test_unit.py` (Validation des garde-fous OMS et des schémas Pydantic).
+    *   `test_functionnal.py` (Validation du scénario de bout-en-bout avec intégration BDD).
+    *   `test_non_regression.py` (Vérification des performances ML par rapport aux seuils critiques).
+*   **Intégration Continue (CI) :** Les GitHub Actions (`ci.yml`) sont configurées et s'exécutent automatiquement à chaque `push` sur le dépôt, garantissant la stabilité du code.
+
+## 9. Backlog Technique Restant
+- **Audit Trail & Monitoring (Priorité 1) :** Étendre l'exploitation des journaux de la table `action_logs` pour tracer l'utilisation des clés API et les temps de réponse sur l'interface d'Exploitation.
+- **Nettoyage final (Priorité 2) :** Unifier les documentations et le README pour le rendu final.
+- **Déploiement continu - CD (Bonus) :** Étendre le pipeline `.github/workflows/ci.yml` pour automatiser le build des images Docker ou le déploiement.
+

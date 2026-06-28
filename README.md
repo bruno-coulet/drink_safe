@@ -97,15 +97,16 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 | `data/processed/water_std.csv` | Version standardisée (référence EDA). En production, la standardisation requise par la Régression Logistique et le MLP est **intégrée à leur `Pipeline` scikit-learn**, donc appliquée à l'identique à l'entraînement et à l'inférence.|
 
 ### Architecture de la Stack Réseau
-
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
 
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
-| --- | --- | --- | --- | --- |
-| **Interface UI** | Streamlit | 8501 | Hôte local (WSL2) | Présentation IHM, filtres experts et téléversement de rapports labo (OCR). |
+| :--- | :--- | :--- | :--- | :--- |
+| **Interface UI** | Flask | 5001 | Hôte local (WSL2) | Présentation IHM (Client, Analyste, Exploitation) et téléversement OCR. |
 | **API Unique** | FastAPI (`api`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
 | **Registre MLOps** | MLflow (`mlflow`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
-| **Base de Données** | PostgreSQL 16 (`postegres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
+| **Base de Données** | PostgreSQL 16 (`postgres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
+| **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
+
 
 ---
 
@@ -150,7 +151,7 @@ docker compose up mlops-training
 ---
 
 #### Relancer le pipeline d'entraînement
- générer les nouvelles versions des modèles dans MLflow   
+ générer les nouvelles versions des modèles dans MLflow
 
  L'option ``--build`` est indispensable chaque fois qu'un fichier Python qui s'exécute dans un conteneur à été modifié :
 ```bash
