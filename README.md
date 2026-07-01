@@ -62,9 +62,20 @@ http://127.0.0.1:5000
 L'API Unique et sa documentation Swagger
 http://127.0.0.1:8000/docs
 
+### 2. Génerer les comptes admins (Si primo activation seulement)
+Peupler la base de donées avec les profils "Analyste" et "Responsable d'Exploitation"
+```bash
+uv run scripts/auth/seed_admins.py
+```
+`uv run` lance un environnement virtuel complètement isolé et ne charge pas systématiquement le fichier `.env`.  
+Dans ce cas, il faut forcer l'outil `uv` à injecter lui-même les variables du fichier `.env` au moment de lancer le script grâce au paramètre `--env-file`: 
+```bash
+uv run --env-file .env python scripts/auth/seed_admins.py
+```
+
 ### 2. Interface Frontend (Streamlit)
 
-Déployez l'IHM finale destinée aux experts et administrateurs depuis votre hôte local :
+Déployer l'IHM finale destinée aux experts et administrateurs depuis `localhost` :
 
 
 ```bash
@@ -160,7 +171,8 @@ docker compose up -d --build mlops-training
 # suivre l'entrainement
 docker logs -f mlops-training
 ```
-Le conteneur va s'exécuter, ré-entraîner les 4 modèles, enregistrer les nouveaux .pkl dans le volume partagé, et s'arrêter proprement
+Le conteneur va s'exécuter, ré-entraîner les 4 modèles, enregistrer les nouveaux .pkl dans le volume partagé, calculer les métriques et les envoie à MLflow, puis s'arrêter proprement
+
 
 Il faut ensuite mettre à jour l'API
 "Lazy Loading" : l'API garde les modèles en cache (RAM) après la première prédiction.
