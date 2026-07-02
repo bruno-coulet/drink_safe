@@ -119,19 +119,23 @@ async def ingerer_fiche_laboratoire(
         t0 = time.time()
 
         reponse_externe = requests.post(
-            OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=15
+            OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=30
         )
 
         if reponse_externe.status_code != 200:
-            # Au lieu de lever une HTTPException directement, on lève une exception classique
-            # pour qu'elle soit attrapée par notre bloc de fallback plus bas.
+            # lève une exception classique
+            # pour qu'elle soit attrapée par le fallback plus bas.
             raise Exception(f"Bad Gateway (Code {reponse_externe.status_code})")
 
         resultat_json = reponse_externe.json()
 
         # Suite du traitement normal si succès...
 
-    except requests.exceptions.Timeout as e:
+    except requests.RequestException as e:
+
+        # Affiche l'erreur réelle et explicite dans le terminal
+        print(f"ocr_call_failed : {e}")
+
         # --- 2. LOG STRUCTURÉ JSON & MÉTRIQUE ---
         duration_ms = int((time.time() - t0) * 1000)
         logger.error(
@@ -139,11 +143,11 @@ async def ingerer_fiche_laboratoire(
             extra={
                 "client_id": client_id,
                 "endpoint": "api.ocr.space",
-                "error": "ReadTimeout",
+                "error": str(e), # enregistre l'erreur dynamique
                 "duration_ms": duration_ms
             }
         )
-        OCR_FAILURES.inc() # On alerte Grafana/Prometheus
+        OCR_FAILURES.inc() # Alerte Grafana/Prometheus
 
         # --- 3. FALLBACK GRACIEUX ---
         # Ne crashe pas l'API, renvoie un statut d'attente à l'utilisateur.
@@ -172,11 +176,24 @@ async def ingerer_fiche_laboratoire(
 
 
     # 4. Analyse et parsing de la réponse d'OCR.space
+    # Log de la réponse brute pour diagnostiquer les erreurs silencieuses
+    logger.debug("ocr_raw_response", extra={"response": resultat_json})
+
     if resultat_json.get("IsErroredOnProcessing", False):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Erreur de traitement par OCR.space : {resultat_json.get('ErrorMessage')}"
+        error_msg = resultat_json.get("ErrorMessage", ["Erreur inconnue"])
+        logger.error(
+            "ocr_processing_error",
+            extra={
+                "client_id": client_id,
+                "error": str(error_msg),
+                "exit_code": resultat_json.get("OCRExitCode"),
+            }
         )
+        OCR_FAILURES.inc()
+        return {
+            "status": "pending",
+            "message": "Le service OCR a rencontré une erreur de traitement (quota ou format non supporté). Votre fichier est mis en file d'attente."
+        }
 
     # Extraction du texte brut fusionné de toutes les pages
     parsed_results = resultat_json.get("ParsedResults", [])
@@ -217,7 +234,10 @@ async def ingerer_fiche_laboratoire(
                     mesures["Organic_carbon"], mesures["Trihalomethanes"],
                     mesures["Turbidity"], f"Fichier d'origine : {nom_fichier}"
                 ))
-                prelevement_id: int = cursor.fetchone()[0]
+                row = cursor.fetchone()
+                if row is None:
+                    raise Exception("INSERT n'a retourné aucun ID de prélèvement")
+                prelevement_id: int = row[0]
                 conn.commit()
 
         return {

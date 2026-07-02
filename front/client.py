@@ -112,9 +112,9 @@ def ocr():
             f"{API_BASE_URL}/ocr/lab-report",
             files={"file": (fichier.filename, fichier.read(), fichier.content_type)},
             headers=headers,
-            timeout=30,
+            timeout=45,
         )
-        if resp_ocr.status_code in [1, 2]:
+        if resp_ocr.status_code in [200, 201]:
             resultat_ocr = resp_ocr.json()
 
             # --- GESTION DU FALLBACK ---
