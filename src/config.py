@@ -1,6 +1,6 @@
 """
 -------------------------------------------------------------------------------
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Configuration Centralisée de l'API Unique
 Description : Gestion dynamique des configurations selon le contexte d'exécution
               (Local vs Docker) pour PostgreSQL et le tracking MLflow.
@@ -32,8 +32,8 @@ FRONT_DIR: Path = ROOT_DIR / "front"
 class Settings:
     """Configuration globale s'adaptant dynamiquement à l'environnement."""
 
-    PROJECT_NAME: str = "Waterflow Unified API"
-    VERSION: str = "2.0.0"
+    PROJECT_NAME: str = "Drink safe API"
+    VERSION: str = "2  .0.0"
 
     # Sécurité et Authentification (Clés API)
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-key-super-secrete")

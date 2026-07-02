@@ -1,5 +1,5 @@
 """
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Suite de Tests de Non-Régression (PyTest) - Version 2 (Enrichie)
 Description : Vérification automatique des métriques de performance du catalogue
               de modèles (F1-score et AUC-PR) et validation de la structure de la
@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import f1_score, average_precision_score, confusion_matrix
 from src.api import ml_models
-from src.config import settings,PATH_WATER_STD
+from src.config import settings
 
 def ensure_models_are_loaded():
     """Force le chargement des modèles en mémoire vive s'ils ne le sont pas encore."""

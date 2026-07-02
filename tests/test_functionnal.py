@@ -1,5 +1,5 @@
 """
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Suite de Tests Fonctionnels et d'Intégration (PyTest)
 Description : Validation du scénario complet de bout en bout : connexion BDD,
               enregistrement client, ingestion OCR, persistance PostgreSQL,
@@ -7,7 +7,6 @@ Description : Validation du scénario complet de bout en bout : connexion BDD,
 """
 
 import os
-from typing import Any, Dict
 import unittest.mock as mock
 import uuid
 import pytest
@@ -15,7 +14,6 @@ import psycopg2
 from fastapi.testclient import TestClient
 from src.config import settings
 from src.api import app
-import unittest.mock as mock
 
 # Initialisation de la base de données pour les tests
 from src.config import init_db

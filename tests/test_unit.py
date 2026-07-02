@@ -1,12 +1,11 @@
 """
-Projet : Waterflow 2
+Projet : Drink safe
 Composant : Suite de Tests Unitaires (PyTest)
 Description : Validation isolée des schémas de données Pydantic, de la sécurité
               des en-têtes (Clés API) et de l'intégrité des règles métiers OMS.
 """
 
 from typing import Any, Dict
-import pytest
 from fastapi.testclient import TestClient
 from src.api import app
 from src.dependencies.auth import get_admin_user

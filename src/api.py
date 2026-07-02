@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         init_db()
     except Exception as e:
-        print(f"⚠️ Alerte : Échec de l'initialisation de la BDD au démarrage : {e}")
+        print(f"Alerte : Échec de l'initialisation de la BDD au démarrage : {e}")
 
     print("[API Unique] Étape 2 : Scan et chargement des modèles depuis MLflow Model Registry...")
     try:

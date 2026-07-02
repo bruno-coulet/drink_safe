@@ -33,8 +33,17 @@ def _extraire_valeur_metrique(texte: str, motif: str, valeur_defaut: float) -> f
             pass
     return valeur_defaut
 
-
-@router.post("/lab-report", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/lab-report",
+    status_code=status.HTTP_201_CREATED,
+    summary="Ingestion d'une fiche laboratoire par OCR",
+    responses={
+        201: {"description": "Prélèvement créé avec succès, renvoie l'ID et les données extraites."},
+        400: {"description": "Fichier illisible ou format non supporté (doit être PDF, JPG, PNG)."},
+        422: {"description": "Champs manquants : l'OCR n'a pas réussi à lire les mesures physico-chimiques obligatoires."},
+        504: {"description": "Timeout OCR : Le service externe OCR.space est injoignable ou met trop de temps à répondre."}
+    }
+)
 async def ingerer_fiche_laboratoire(
     file: UploadFile = File(..., description="Fiche laboratoire au format PDF, PNG ou JPG"),
     client_id: str = Depends(get_current_client)
