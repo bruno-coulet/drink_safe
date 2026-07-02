@@ -9,7 +9,7 @@
 </head>
 <body>
 
-{% if session.role %}
+<!-- {% if session.role %}
 <nav class="navbar navbar-dark bg-dark px-4">
     <span class="navbar-brand fw-bold">Drink Safe</span>
     <div class="d-flex align-items-center gap-3">
@@ -22,7 +22,24 @@
         <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-light">Déconnexion</a>
     </div>
 </nav>
-{% endif %}
+{% endif %} -->
+
+<nav class="navbar navbar-dark bg-dark px-4">
+    <span class="navbar-brand fw-bold">Drink Safe</span>
+
+    <!-- Affiche le badge UNIQUEMENT si on n'est PAS sur la page /login -->
+    {% if request.path != '/login' and session.get('role') %}
+    <div class="d-flex align-items-center gap-3">
+        <span class="badge
+            {% if session.role == 'client' %}bg-primary
+            {% elif session.role == 'analyste' %}bg-success
+            {% else %}bg-warning text-dark{% endif %}">
+            {{ session.role | capitalize }}
+        </span>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-light">Déconnexion</a>
+    </div>
+    {% endif %}
+</nav>
 
 <div class="container py-4">
     {% with messages = get_flashed_messages(with_categories=true) %}

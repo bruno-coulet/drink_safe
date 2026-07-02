@@ -78,13 +78,6 @@ def login():
             flash("Identifiant ou mot de passe manquant.", "danger")
             return render_template("login.html")
 
-        # if role == "client":
-        #     if _valider_cle_client(credential):
-        #         session["role"] = "client"
-        #         session["api_key"] = credential
-        #         return redirect(url_for("client.dashboard"))
-        #     flash("Clé API invalide ou révoquée.", "danger")
-
         if role == "client":
             donnees_client = _valider_cle_client(credential)
 
@@ -104,6 +97,17 @@ def login():
             if _verifier_mot_de_passe(credential, ADMIN_ANALYSTE_HASH) and ADMIN_ANALYSTE_API_KEY:
                 session["role"] = "analyste"
                 session["api_key"] = ADMIN_ANALYSTE_API_KEY
+
+                # Interroge l'API avec la clé maître pour récupérer la dénomination en BDD
+                donnees_analyste = _valider_cle_client(ADMIN_ANALYSTE_API_KEY)
+                if donnees_analyste:
+                    session["client_id"] = donnees_analyste.get("client_id", "ID inconnu")
+                    # On cherche "nom_structure" ou "denomination" selon votre nommage exact
+                    session["nom_structure"] = donnees_analyste.get("nom_structure", donnees_analyste.get("denomination", "Analyste Qualité"))
+                else:
+                    session["nom_structure"] = "Expertise Qualité" # Valeur de secours
+                # -------------
+
                 return redirect(url_for("analyste.dashboard"))
             flash("Mot de passe analyste incorrect.", "danger")
 
@@ -111,6 +115,16 @@ def login():
             if _verifier_mot_de_passe(credential, ADMIN_EXPLOITATION_HASH) and ADMIN_EXPLOITATION_API_KEY:
                 session["role"] = "exploitation"
                 session["api_key"] = ADMIN_EXPLOITATION_API_KEY
+
+                # --- Interroge l'API avec la clé maître pour récupérer la dénomination en BDD ---
+                donnees_exploit = _valider_cle_client(ADMIN_EXPLOITATION_API_KEY)
+                if donnees_exploit:
+                    session["client_id"] = donnees_exploit.get("client_id", "ID inconnu")
+                    session["nom_structure"] = donnees_exploit.get("nom_structure", donnees_exploit.get("denomination", "Responsable d'Exploitation"))
+                else:
+                    session["nom_structure"] = "Responsable d'Exploitation"
+                # -------------
+
                 return redirect(url_for("exploitation.dashboard"))
             flash("Mot de passe exploitation incorrect.", "danger")
 

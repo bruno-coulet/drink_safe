@@ -141,12 +141,19 @@ h2, h5, .label, .form-check-label {
     border-bottom: 3px solid var(--accent-color) !important; /* Ligne orange pour séparer l'en-tête */
 }
 
+/* Le style normal des cellules des tableaux */
 .table td {
     background-color: #ffffff !important; /* Cellules blanches */
     color: var(--bs-dark) !important; /* Texte sombre (Bleu très foncé #1f3347) */
     vertical-align: middle;
     font-size: 0.88rem;
-    border-color: #dee2e6 !important; /* Ligne séparatrice grise classique de Bootstrap */
+    border-color: #dee2e6 !important; /* Ligne séparatrice grise classique */
+}
+
+/* cible les textes "muted" UNIQUEMENT dans les tableaux */
+.table .text-muted {
+    color: var(--bs-dark) !important; /* Force le texte à devenir sombre */
+    font-weight: 500;
 }
 
 /* Mise en évidence les durées anormalement longues (Adapté pour ressortir sur fond blanc) */
@@ -160,4 +167,51 @@ h2, h5, .label, .form-check-label {
     background-color: rgba(255, 193, 7, 0.15) !important;
     color: #856404 !important; /* Texte jaune/marron foncé */
     font-weight: 600;
+}
+/* ==========================================================================
+   6. CORRECTIONS DE CONTRASTE (À placer tout à la fin du fichier)
+   ========================================================================== */
+
+/* 1. Force tout le texte à être blanc clair dans les cartes et boîtes foncées */
+.card, .card-body, .bg-dark {
+    color: floralwhite !important;
+}
+
+/* 2. Force spécifiquement les paragraphes, spans et textes "muted" à redevenir blancs dans ces boîtes */
+.card p, .card span, .card .text-muted, .card .small,
+.bg-dark p, .bg-dark span, .bg-dark .text-muted, .bg-dark .small {
+    color: floralwhite !important;
+}
+
+/* 3. Protection ABSOLUE des tableaux : leur texte DOIT rester bleu foncé (#1f3347) */
+.card .table td,
+.card .table td p,
+.card .table td span,
+.card .table td .text-muted,
+.card .table td .small,
+.bg-dark .table td,
+.bg-dark .table td p,
+.bg-dark .table td span,
+.bg-dark .table td .text-muted,
+.bg-dark .table td .small {
+    color: #1f3347 !important;
+}
+
+/* 4. On préserve vos couleurs d'alerte (Rouge et Jaune) dans les tableaux */
+.card .table .table-danger td,
+.bg-dark .table .table-danger td {
+    color: #dc3545 !important;
+}
+
+.card .table .table-warning td,
+.bg-dark .table .table-warning td {
+    color: #856404 !important;
+}
+
+/* 5. Exception pour les badges (Provenance, Résultat, Statuts) pour qu'ils restent blancs */
+.card .table td .badge,
+.bg-dark .table td .badge,
+.card .table td [class*="bg-"], /* Cible tout élément ayant une classe Bootstrap bg-... */
+.bg-dark .table td [class*="bg-"] {
+    color: floralwhite !important;
 }

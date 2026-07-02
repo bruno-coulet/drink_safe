@@ -2,8 +2,15 @@
 {% block title %}Supervision Métier — Analyste Qualité{% endblock %}
 
 {% block content %}
+
+<!-- Le badge bleu, aligné à gauche juste au-dessus du titre (comme pour le client) -->
+<div class="mb-3">
+    <span class="badge bg-primary fs-6">{{ session.get('client_id') }}</span>
+</div>
+
 <h2 class="mb-1">Supervision des prélèvements</h2>
 <p class="text-muted mb-4">Vue globale filtrée par client, provenance, résultat et période.</p>
+
 
 {% if erreur %}
 <div class="alert alert-danger">{{ erreur }}</div>
