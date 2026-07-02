@@ -23,6 +23,8 @@ from src.routes.measurements import router as measurements_router
 from src.routes.predictions import router as predictions_router
 from src.routes.ocr import router as ocr_router
 from src.routes.monitoring import router as monitoring_router
+from prometheus_client import Counter, Histogram, make_asgi_app
+import time
 
 # --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
 import requests
@@ -37,8 +39,6 @@ def patched_prepare_headers(self, headers):
 requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 # -----------------------------------------------------------
 
-
-
 # Configuration globale de la connexion à MLflow
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 
@@ -46,8 +46,6 @@ mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 ml_models: Dict[str, Any] = {}
 # Registre parallèle des versions chargées (algo_key -> numéro de version)
 ml_model_versions: Dict[str, str] = {}
-
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -187,3 +185,23 @@ def health_check() -> Dict[str, Any]:
         "version": settings.VERSION,
         "active_models": active_models
     }
+
+# --- MONITORING ---------
+# 1. Définition des métriques RED (Rate, Errors, Duration)
+REQUESTS = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
+LATENCY = Histogram("http_request_duration_seconds", "Request duration", ["endpoint"])
+
+# 2. Le middleware qui intercepte chaque appel API
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    t0 = time.time()
+    response = await call_next(request)
+
+    # On enregistre la durée et le statut
+    LATENCY.labels(endpoint=request.url.path).observe(time.time() - t0)
+    REQUESTS.labels(method=request.method, endpoint=request.url.path, status=response.status_code).inc()
+
+    return response
+
+# 3. Monte la route /metrics accessible pour Prometheus
+app.mount("/metrics", make_asgi_app())

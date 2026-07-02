@@ -114,8 +114,19 @@ def ocr():
             headers=headers,
             timeout=30,
         )
-        if resp_ocr.status_code == 201:
+        if resp_ocr.status_code in [1, 2]:
             resultat_ocr = resp_ocr.json()
+
+            # --- GESTION DU FALLBACK ---
+            # On vérifie IMMÉDIATEMENT si on a reçu le statut d'attente
+            if resultat_ocr.get("status") == "pending":
+                # On affiche le message de secours envoyé par l'API dans un bandeau jaune
+                flash(resultat_ocr.get("message"), "warning")
+                # On redirige le client sans essayer d'afficher les mesures ni faire de prédiction
+                return redirect(url_for("client.dashboard"))
+            # ------------------------------------------
+
+            # Si on arrive ici, l'OCR a réussi, on peut faire la prédiction
             prelevement_id = resultat_ocr.get("prelevement_id")
             resp_pred = requests.post(
                 f"{API_BASE_URL}/predict/from-prelevement/{prelevement_id}",
@@ -124,6 +135,8 @@ def ocr():
             )
             if resp_pred.status_code == 200:
                 resultat_pred = resp_pred.json()
+
+
         else:
             erreur = f"Échec OCR ({resp_ocr.status_code}) : {resp_ocr.text}"
     except requests.RequestException as e:
@@ -135,6 +148,14 @@ def ocr():
         resultat_pred=resultat_pred,
         erreur=erreur,
     )
+
+
+
+
+
+
+
+
 
 
 @client_bp.route("/export-rgpd")

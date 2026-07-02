@@ -7,8 +7,8 @@ Description : Réception de fiches de laboratoire (PDF/Images), interconnexion
 -------------------------------------------------------------------------------
 """
 
-import os
-import re
+import os, time, re
+
 from typing import Any, Dict, Optional
 import requests
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -17,10 +17,23 @@ import psycopg2
 from src.config import settings
 from src.dependencies.auth import get_current_client
 
+from prometheus_client import Counter
+import logging
+# Initialisation du logger
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/ocr", tags=["Ingestion & Traitement OCR"])
 
-# URL officielle d'OCR.space (Moteur de parsing par défaut)
+
+# ------URL d'OCR.space ------
 OCR_SPACE_URL: str = "https://api.ocr.space/parse/image"
+# FAUSSE URL pour les tester le Fallback
+# OCR_SPACE_URL: str = "https://ooo.ooo.space/parse/image"
+# ----------------------------
+
+
+# Création d'une métrique spécifique pour surveiller la santé de l'OCR externe
+OCR_FAILURES = Counter("ocr_failures_total", "Total d'échecs du service OCR externe")
 
 
 def _extraire_valeur_metrique(texte: str, motif: str, valeur_defaut: float) -> float:
@@ -77,29 +90,86 @@ async def ingerer_fiche_laboratoire(
         "file": (nom_fichier, contenu_fichier, file.content_type)
     }
 
+    # try:
+    #     reponse_externe = requests.post(
+    #         OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=15
+    #     )
+
+    #     if reponse_externe.status_code != 200:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_502_BAD_GATEWAY,
+    #             detail=f"Le service OCR.space a répondu avec une erreur (Code {reponse_externe.status_code})."
+    #         )
+
+    #     resultat_json = reponse_externe.json()
+
+    # except requests.exceptions.Timeout:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+    #         detail="Le service OCR.space n'a pas répondu dans le temps imparti (Timeout)."
+    #     )
+    # except Exception as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail=f"Erreur lors de la communication avec le service OCR : {str(e)}"
+    #     )
+
     try:
+        # Chronomètre l'appel pour nos logs
+        t0 = time.time()
+
         reponse_externe = requests.post(
             OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=15
         )
 
         if reponse_externe.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Le service OCR.space a répondu avec une erreur (Code {reponse_externe.status_code})."
-            )
+            # Au lieu de lever une HTTPException directement, on lève une exception classique
+            # pour qu'elle soit attrapée par notre bloc de fallback plus bas.
+            raise Exception(f"Bad Gateway (Code {reponse_externe.status_code})")
 
         resultat_json = reponse_externe.json()
 
-    except requests.exceptions.Timeout:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Le service OCR.space n'a pas répondu dans le temps imparti (Timeout)."
+        # Suite du traitement normal si succès...
+
+    except requests.exceptions.Timeout as e:
+        # --- 2. LOG STRUCTURÉ JSON & MÉTRIQUE ---
+        duration_ms = int((time.time() - t0) * 1000)
+        logger.error(
+            "ocr_call_failed",
+            extra={
+                "client_id": client_id,
+                "endpoint": "api.ocr.space",
+                "error": "ReadTimeout",
+                "duration_ms": duration_ms
+            }
         )
+        OCR_FAILURES.inc() # On alerte Grafana/Prometheus
+
+        # --- 3. FALLBACK GRACIEUX ---
+        # Ne crashe pas l'API, renvoie un statut d'attente à l'utilisateur.
+        return {
+            "status": "pending",
+            "message": "Le service OCR est temporairement ralenti. Votre document est sauvegardé en attente de traitement asynchrone."
+        }
+
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur lors de la communication avec le service OCR : {str(e)}"
+        duration_ms = int((time.time() - t0) * 1000)
+        logger.error(
+            "ocr_call_failed",
+            extra={
+                "client_id": client_id,
+                "endpoint": "api.ocr.space",
+                "error": str(e),
+                "duration_ms": duration_ms
+            }
         )
+        OCR_FAILURES.inc()
+
+        return {
+            "status": "pending",
+            "message": "Service OCR indisponible. Votre fichier est mis en file d'attente."
+        }
+
 
     # 4. Analyse et parsing de la réponse d'OCR.space
     if resultat_json.get("IsErroredOnProcessing", False):
@@ -162,3 +232,4 @@ async def ingerer_fiche_laboratoire(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de l'archivage SQL du prélèvement OCR : {str(e)}"
         )
+
