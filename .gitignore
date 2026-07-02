@@ -13,6 +13,8 @@ wheels/
 .env
 *.pyc
 
+.DS_Store
+
 # Données et fichiers temporaires
 data/*
 temp/*
