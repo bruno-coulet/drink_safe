@@ -67,8 +67,8 @@ Peupler la base de donées avec les profils "Analyste" et "Responsable d'Exploit
 ```bash
 uv run scripts/auth/seed_admins.py
 ```
-`uv run` lance un environnement virtuel complètement isolé et ne charge pas systématiquement le fichier `.env`.  
-Dans ce cas, il faut forcer l'outil `uv` à injecter lui-même les variables du fichier `.env` au moment de lancer le script grâce au paramètre `--env-file`: 
+`uv run` lance un environnement virtuel complètement isolé et ne charge pas systématiquement le fichier `.env`.
+Dans ce cas, il faut forcer l'outil `uv` à injecter lui-même les variables du fichier `.env` au moment de lancer le script grâce au paramètre `--env-file`:
 ```bash
 uv run --env-file .env python scripts/auth/seed_admins.py
 ```
@@ -117,6 +117,8 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 | **Registre MLOps** | MLflow (`mlflow`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
 | **Base de Données** | PostgreSQL 16 (`postgres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
 | **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
+| **Métriques** | Prometheus | 9090 | Conteneur Docker | Scraping des métriques exposées par l'API (`/metrics/`) : volumes, erreurs, latence. |
+| **Supervision** | Grafana | 3000 | Conteneur Docker | Dashboard RED (Rate / Errors / Duration) et suivi de la santé OCR (`ocr_failures_total`). |
 
 
 ---
@@ -191,7 +193,7 @@ Le container `mlops-training` :
 - écrit les artefacts binaires dans le volume partagé
 - s'arrête proprement (`exited with code 0`).
 
-![Pipeline d'entraînement MLOps](img/pipeline_mlops.png)
+![Pipeline d'entraînement MLOps](img/pipeline_mlops.svg)
 
 ---
 
@@ -209,7 +211,7 @@ Au-delà du garde-fou, l'inférence interroge **les 4 modèles** et renvoie pour
 - **Saisie directe** : `POST /api/predict/all` (crée le prélèvement et le consensus).
 - **Fiche OCR** : `POST /api/ocr/lab-report` crée le prélèvement, puis `POST /api/predict/from-prelevement/{id}` enrichit **la même ligne** avec le consensus (pas de doublon).
 
-![Flux d'une prédiction](img/flux_prediction.png)
+<!-- ![Flux d'une prédiction](img/flux_prediction.png) -->
 
 
 ## API REST — endpoints & exemples d'appels
@@ -252,7 +254,7 @@ curl -X POST http://127.0.0.1:8000/api/predict/from-prelevement/<prelevement_id>
   -H "X-API-Key: wf_live_..."
 ```
 
-## Interface web (Streamlit)
+## Interface web (Flask)
 
 L'IHM expose trois volets :
 1. **Analyse par curseurs** : saisie manuelle d'un échantillon, soumis aux 4 modèles avec verdict consensus et tableau comparatif.
@@ -261,10 +263,8 @@ L'IHM expose trois volets :
 
 ## Limites connues
 
-- **OCR partiel** : l'extraction par regex porte sur les 9 mesures physico-chimiques ; la `date` et les `observations` du document ne sont pas encore extraites (l'`ID client` provient de la clé API). Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée.
+- **OCR partiel** : l'extraction par regex porte sur les 9 mesures physico-chimiques ; la `date` et les `observations` du document ne sont pas encore extraites (l'`ID client` provient de la clé API). Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée. En cas d'indisponibilité ou de quota atteint côté OCR.space (`IsErroredOnProcessing`, timeout), l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.
 - **Rôles experts simplifiés** : l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
-- **Métriques** : les accès sont journalisés dans `action_logs` (client, route, statut, durée) mais aucune métrique agrégée n'est exposée (endpoint `/metrics` ou Prometheus/Grafana en option).
-- **Monitoring exploitation** : le tableau de bord du responsable d'exploitation est hors socle (option de l'énoncé).
 
 ## Guide de lancement : Développement vs Production
 
