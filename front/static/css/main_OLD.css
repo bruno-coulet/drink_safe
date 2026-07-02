@@ -1,0 +1,121 @@
+
+body {
+    background:
+        linear-gradient(
+            rgba(35, 70, 95, 0.65),
+            rgba(35, 70, 95, 0.65)
+        ),
+        url("/static/img/eau.webp") center / cover no-repeat fixed;
+
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+
+.navbar-brand {
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+/* Login */
+.btn-outline-light {
+    color: #cc7621;
+    border-color: #cc7621;
+
+    --bs-btn-hover-bg: #b16315;
+    --bs-btn-hover-border-color: hsl(46, 68%, 57%);
+}
+
+/* Client */
+.btn-dark,
+.btn-outline-dark,
+.btn-success /* Exploitation */
+{
+    --bs-btn-bg: #cc7621;
+    --bs-btn-border-color: #cc7621;
+
+    --bs-btn-hover-bg: #b16315;
+    --bs-btn-hover-border-color: hsl(46, 68%, 57%);
+
+    --bs-btn-color: floralwhite;
+    --bs-btn-hover-color: floralwhite;
+}
+
+:root {
+    --bs-primary: #23465f;
+    --bs-primary-rgb: 35, 70, 95;
+}
+
+.card-header.bg-primary.text-white{
+    --bs-primary-rgb: #23465f;
+}
+
+.table th{
+    background-color: #23465f;
+    color: floralwhite;
+}
+
+.card-body {
+    background-color: #23465f;
+    color: floralwhite;
+}
+
+.card-header.fw-semibold, .card-header.bg-info.text-white{
+    background-color: #1f3347;
+    color: floralwhite;
+}
+
+.card-header.fw-semibold, h5{
+    font-size: 1.1rem;
+}
+
+.text-muted{
+color: floralwhite!important;
+}
+
+h2.mb-1, .label, .form-check-label, .text-muted{
+    color: floralwhite;
+}
+
+
+
+.cold-md-5{
+    width: max-content!important;
+}
+
+
+.form-label{
+color: #71a6d5;
+}
+
+
+.bg-dark, .bg-info {
+    background-color: #1f3347!important;
+}
+/* OCR */
+/* .bg-info {
+    background-color: rgb(35 70 95)!important;
+} */
+
+
+.font-monospace {
+    font-size: 0.88rem;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.88rem;
+}
+
+/* Met en évidence les durées anormalement longues */
+.table-danger td, .table-warning td {
+    font-size: 0.88rem;
+}
