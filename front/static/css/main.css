@@ -29,8 +29,8 @@
 body {
     background:
         linear-gradient(
-            rgba(162, 188, 205, 0.85), /* Votre nouveau fond éclairci */
-            rgba(131, 156, 173, 0.85)
+            rgba(162, 188, 205, 0.85), /* nouveau fond éclairci */
+            rgba(162, 188, 205, 0.85)
         ),
         url("/static/img/eau.webp") center / cover no-repeat fixed;
     font-family: system-ui, -apple-system, sans-serif;
