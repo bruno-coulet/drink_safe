@@ -96,3 +96,13 @@ docker compose exec api pytest tests/test_functionnal.py -s
   * **Erreur du descriptif source :** Scientifiquement, le seuil de potabilité réglementaire de l'OMS pour les THM est de `80 µg/L` (soit environ `0,08 ppm`). Le descriptif initial du dataset d'origine Kaggle mentionnait par erreur l'unité `ppm` pour la valeur `80`.
 * **Résolutions appliquées :**
   * **Alignement complet :** Pour éviter d'introduire des décalages d'échelle numériques qui fausseraient les prédictions de l'IA (qui a appris sur des valeurs brutes proches de 80), l'unité a été standardisée sur le terme **`ppm`** sur l'ensemble de la chaîne de l'application (modèle de données, formulaires frontend Flask, guides d'API, curseurs d'IHM et code de validation).
+
+---
+
+### Incident I : Accessibilité (contraste et sémantique):
+Les interfaces Flask sont conçues en tenant compte du RGAA.
+J'ai retravaillé les feuilles de style (CSS) pour garantir un niveau de contraste suffisant entre le texte et les fonds d'écran dynamiques afin que l'interface soit lisible pour les personnes malvoyantes :
+Le Contraste (RGAA / WCAG) :
+modification de la couleur des textes .text-muted (d'un gris illisible vers un bleu très foncé) pour les adapter au nouveau fond clair (le ratio de contraste).
+
+De plus, j'ai utilisé des balises sémantiques HTML (h2, th pour les tableaux) pour structurer l'information.

@@ -23,15 +23,20 @@
 /* ==========================================================================
    2. STRUCTURE DE BASE
    ========================================================================== */
+/* ==========================================================================
+   2. STRUCTURE DE BASE & TYPOGRAPHIE GLOBALE
+   ========================================================================== */
 body {
     background:
         linear-gradient(
-            rgba(35, 70, 95, 0.65),
-            rgba(35, 70, 95, 0.65)
+            rgba(162, 188, 205, 0.85), /* Votre nouveau fond éclairci */
+            rgba(131, 156, 173, 0.85)
         ),
         url("/static/img/eau.webp") center / cover no-repeat fixed;
     font-family: system-ui, -apple-system, sans-serif;
-    color: var(--text-light);
+
+    /* Le texte par défaut sur la page devient sombre (lisible sur fond clair) */
+    color: var(--bs-dark);
 }
 
 .navbar-brand {
@@ -39,20 +44,23 @@ body {
     letter-spacing: 0.05em;
 }
 
-/* Typographie globale */
+/* Titres par défaut (sombre) */
 h2, h5, .label, .form-check-label {
-    color: var(--text-light);
+    color: var(--bs-dark);
 }
 
 .form-label {
     color: var(--text-label);
 }
 
-/* Texte discret : utilisation d'une transparence sur le floralwhite
-   plutôt que du blanc pur pour qu'il soit vraiment "muted" */
+/* Texte discret par défaut (Gris sombre pour être lisible sur l'image d'eau claire) */
+/* .text-muted {
+    color: #4a5568 !important;
+} */
+/* Texte discret par défaut (Plus sombre et plus épais pour ressortir sur le fond clair) */
 .text-muted {
-    /* color: rgba(255, 250, 240, 0.7) !important; */
-    color: rgb(255, 250, 240) !important;
+    color: #1f3347 !important; /* Utilisation de votre bleu foncé (au lieu du gris) */
+    font-weight: 500 !important; /* Épaissit légèrement le texte (Medium) */
 }
 
 
@@ -91,6 +99,18 @@ h2, h5, .label, .form-check-label {
     color: var(--text-light);
     /*border: none;  supprime la bordure grise disgracieuse de Bootstrap */
 }
+
+/* Règle magique : Les H2, H5 et Labels redeviennent clairs UNIQUEMENT dans une carte */
+.card h2, .card h5, .card .label, .card .form-check-label {
+    color: var(--text-light);
+}
+
+/* Règle magique : Le text-muted redevient clair/transparent UNIQUEMENT dans une carte */
+.card .text-muted, .bg-dark .text-muted {
+    color: rgba(255, 250, 240, 0.7) !important;
+}
+
+
 
 .card-header {
     background-color: var(--bs-dark) !important;

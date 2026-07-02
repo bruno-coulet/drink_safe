@@ -45,25 +45,25 @@ User Storie #5 : Transparence et conformité RGPD
 User Storie #6 : Analyse ciblée et filtres multicritères
 
 
-🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span> 
+🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span>
 
-🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir filtrer les prélèvements par client, zone, date et provenance (OCR ou saisie manuelle)</span> 
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir filtrer les prélèvements par client, zone, date et provenance (OCR ou saisie manuelle)</span>
 
 🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">mener des analyses ciblées et réaliser des contrôles qualité précis sur des sous-ensembles de données
 .</span>
 User Storie #7 : MLOps et Rejeu des prédictions
 
 
-🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span> 
+🔵 En tant qu' <span style="color:#2f80ed; font-weight:bold;">Analyste Qualité</span>
 
-🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir rejouer une prédiction sur un prélèvement passé et la comparer avec les différentes versions du modèle enregistrées sous MLflow</span> 
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir rejouer une prédiction sur un prélèvement passé et la comparer avec les différentes versions du modèle enregistrées sous MLflow</span>
 🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">vérifier l'impact des nouvelles versions d'entraînement du modèle sur des dossiers d'analyses sensibles
 .</span>
 User Storie #8 : Suivi des incidents et MCO (Maintien en Condition Opérationnelle)
 
-🔵 En tant que <span style="color:#2f80ed; font-weight:bold;">Responsable d'Exploitation</span> 
+🔵 En tant que <span style="color:#2f80ed; font-weight:bold;">Responsable d'Exploitation</span>
 
-🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir documenter et suivre la résolution d'incidents techniques (erreurs d'API, échecs d'extraction OCR, dérive des données)</span> 
+🟠 Je veux <span style="color:#f2994a; font-weight:bold;">pouvoir documenter et suivre la résolution d'incidents techniques (erreurs d'API, échecs d'extraction OCR, dérive des données)</span>
 
 🟣 Afin de <span style="color:#9b51e0; font-weight:bold;">garantir le maintien en condition opérationnelle de la plateforme et historiser les actions correctives
 .</span>
@@ -168,7 +168,7 @@ Chaque entité cliente de la collectivité possède un profil persistant en base
 </ul>
 ---
 
-<strong style="color: blue;">4. Responsable d’exploitation</strong>  
+<strong style="color: blue;">4. Responsable d’exploitation</strong>
 <ul style="color: orange;">
 <li>disposer d’une plateforme unique pour :</li>
 <ul>
@@ -177,8 +177,8 @@ Chaque entité cliente de la collectivité possède un profil persistant en base
     <li>temps de réponse</li>
     <li>volume de requêtes</li>
     <li>etc...</li>
-</ul> 
-</ul> 
+</ul>
+</ul>
 
 ---
 ---
@@ -215,7 +215,7 @@ sont les seuls à pouvoir :
 
 ### Profils à prendre en compte
 
-<strong style="color: blue;">Client final de la collectivité</strong>   
+<strong style="color: blue;">Client final de la collectivité</strong>
 <span style="color: orange;">possède :</span>
 
 - ID client
@@ -225,11 +225,11 @@ sont les seuls à pouvoir :
 - déposer des prélèvements (données structurées ou fiche
 labo PDF/image)
 - consulter ses propres données et résultats via
-API et/ou une vue simplifiée.   
+API et/ou une vue simplifiée.
 
 ---
 
-<strong style="color: blue;">Analyste qualité</strong>   
+<strong style="color: blue;">Analyste qualité</strong>
 <span style="color: orange;">Accède à tous les :</span>
 - prélèvements
 - dashboards
@@ -239,7 +239,7 @@ API et/ou une vue simplifiée.
 
 ---
 
-<strong style="color: blue;">Responsable d’exploitation</strong>   
+<strong style="color: blue;">Responsable d’exploitation</strong>
 <span style="color: orange;">Supervise la santé globale de la plateforme :</span>
 
 - disponibilité
@@ -249,3 +249,7 @@ API et/ou une vue simplifiée.
 
 ● Suit la gestion des clés API, les journaux d’accès et les incidents
 techniques. -->
+
+
+### Critère d'acceptation
+Les tableaux de bord doivent être lisibles avec un contraste respectant la norme WCAG AA.
