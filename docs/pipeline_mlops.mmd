@@ -3,28 +3,28 @@ flowchart TD
     classDef processStyle fill:#2f80ed,stroke:#1d5ca8,stroke-width:2px,color:#fff;
     classDef successStyle fill:#9b51e0,stroke:#7035ab,stroke-width:2px,color:#fff;
 
-    Trigger["🚀 Déclenchement de l'entraînement<br/>(docker restart mlops-training)"]:::startStyle
+    Trigger["Déclenchement de l'entraînement<br/>(docker restart mlops-training)"]:::startStyle
 
     subgraph Step1 ["Étape 1 : Initialisation & Réseau"]
-        Wait["⏳ Pause temporisée (15s)<br/>(Attente de la disponibilité de mlflow/postgres)"]
-        ReadEnv["🔑 Lecture du fichier .env<br/>(Chargement de MLFLOW_TRACKING_URI)"]
+        Wait["Pause temporisée (15s)<br/>(Attente de la disponibilité de mlflow/postgres)"]
+        ReadEnv["Lecture du fichier .env<br/>(Chargement de MLFLOW_TRACKING_URI)"]
     end
 
     subgraph Step2 ["Étape 2 : Préparation des Données"]
-        LoadCSV["📥 Chargement de water_potability.csv"]
-        Impute["🧹 Imputation par la médiane<br/>(water_imputed.csv)"]
+        LoadCSV["Chargement de water_potability.csv"]
+        Impute["Imputation par la médiane<br/>(water_imputed.csv)"]
     end
 
     subgraph Step3 ["Étape 3 : Entraînement Équilibré"]
-        Train["🧠 Entraînement des 4 architectures<br/>(Ajout class_weight='balanced')"]
+        Train["Entraînement des 4 architectures<br/>(Ajout class_weight='balanced')"]
     end
 
     subgraph Step4 ["Étape 4 : Registre & Persistance"]
-        LogMetrics["📈 Enregistrement des métriques dans PostgreSQL"]
-        SavePKL["💾 Enregistrement des .pkl dans ./mlruns_artifacts"]
+        LogMetrics["Enregistrement des métriques dans PostgreSQL"]
+        SavePKL["Enregistrement des .pkl dans ./mlruns_artifacts"]
     end
 
-    Exit["✅ Arrêt propre du conteneur<br/>(Exited with code 0)"]:::successStyle
+    Exit["Arrêt propre du conteneur<br/>(Exited with code 0)"]:::successStyle
 
     %% Flux vertical
     Trigger --> Wait

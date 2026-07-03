@@ -145,7 +145,7 @@ Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds 
 * **Backend Store (BDD) :**
 MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
 * **Artifact Store (Volume) :**
-Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`   
+Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`
 Ce dossier est monté comme volume partagé sur `mlflow`, `mlops-training` et `api`.
 * **Préchargement et Lazy Loading :**
 Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
@@ -210,7 +210,8 @@ Le container `mlops-training` :
 - écrit les artefacts binaires dans le volume partagé
 - s'arrête proprement (`exited with code 0`).
 
-![Pipeline d'entraînement MLOps](img/pipeline_mlops.svg)
+<!-- ![Pipeline d'entraînement MLOps](img/pipeline_mlops.svg) -->
+<img src="img/pipeline_mlops.svg" alt="Pipeline d'entraînement MLOps" style="width:40%;">
 
 ---
 
