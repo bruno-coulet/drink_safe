@@ -1,4 +1,4 @@
-# Waterflow 2
+# Drink safe
 ## Centralisation API Unique, Ingestion OCR & MLOps
 
 ## Contexte du projet
@@ -12,7 +12,7 @@ Il implémente :
 - la prédiction.
 
 Réalisé sous l'environnement WSL2, le système intègre :
-- une interface utilisateur réactive (Streamlit).
+- une interface utilisateur réactive (Flask).
 - une **API Unique unifiée (FastAPI)** gérant :
     - l'ingestion des données (Data)
     - l'extraction documentaire (OCR)
@@ -35,7 +35,7 @@ recall sur la classe non-potable est la métrique métier prioritaire ici : mini
  sklearn calcule le recall sur la classe positive (1 = Potable) par défaut, ce qui ne correspond pas à cet objectif.
 
 
-Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que [son descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
+Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que son [descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
 
 
 ---
@@ -53,16 +53,10 @@ Avec intégration WSL2 : settings/ressources/wsl integration
 - serveur MLflow
 - serveur API Unique
 ```bash
-docker compose up -d postgres mlflow api
+docker compose up -d
 ```
 
-L'interface de suivi MLflow
-http://127.0.0.1:5000
-
-L'API Unique et sa documentation Swagger
-http://127.0.0.1:8000/docs
-
-### 2. Génerer les comptes admins (Si primo activation seulement)
+### 2. Si primo activation seulement : génerer les comptes admins
 Peupler la base de donées avec les profils "Analyste" et "Responsable d'Exploitation"
 ```bash
 uv run scripts/auth/seed_admins.py
@@ -87,6 +81,15 @@ uv run flask --app front/app run --debug --port 5001
 Interface utilisateur
 http://127.0.0.1:5001
 
+L'API Unique et sa documentation Swagger
+http://127.0.0.1:8000/docs
+
+L'interface de suivi MLflow
+http://127.0.0.1:5000
+
+Interface monitoring
+http://localhost:3000/
+
 ---
 
 ## Stack Technique Fixe
@@ -110,7 +113,7 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 ### Architecture de la Stack Réseau
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
 
-| Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
+<!-- | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
 | :--- | :--- | :--- | :--- | :--- |
 | **Interface UI** | Flask | 5001 | Hôte local (WSL2) | Présentation IHM (Client, Analyste, Exploitation) et téléversement OCR. |
 | **API Unique** | FastAPI (`api`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
@@ -118,7 +121,17 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 | **Base de Données** | PostgreSQL 16 (`postgres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
 | **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
 | **Métriques** | Prometheus | 9090 | Conteneur Docker | Scraping des métriques exposées par l'API (`/metrics/`) : volumes, erreurs, latence. |
-| **Supervision** | Grafana | 3000 | Conteneur Docker | Dashboard RED (Rate / Errors / Duration) et suivi de la santé OCR (`ocr_failures_total`). |
+| **Supervision** | Grafana | 3000 | Conteneur Docker | Dashboard RED (Rate / Errors / Duration) et suivi de la santé OCR (`ocr_failures_total`). | -->
+
+| Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
+|---|---|---|---|---|
+| **Interface UI** | Flask | 5001 | Hôte local (WSL2) | Présentation IHM (Client, Analyste, Exploitation) et téléversement OCR. |
+| **API Unique** | FastAPI (`api`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
+| **Registre MLOps** | MLflow (`mlflow`) | 5000 | Conteneur Docker (Volume partagé) | Gestion du cycle de vie des modèles et Model Registry. |
+| **Base de Données** | PostgreSQL 16 (`postgres`) | 5432 | Conteneur Docker (Volume persistant) | SGBDR unifié (Stockage applicatif + Métadonnées MLflow). |
+| **Supervision** | Prometheus | 9090 | Conteneur Docker (Volume persistant) | Collecte et sauvegarde de l'historique des métriques temporelles. |
+| **Dashboard RED** | Grafana | 3000 | Conteneur Docker (Volume persistant) | Tableaux de bord de santé du système pour le Responsable d'exploitation. |
+| **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
 
 
 ---
@@ -129,9 +142,13 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 
 Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds (`.pkl`), l'architecture sépare physiquement le stockage :
 
-* **Backend Store (BDD) :** MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
-* **Artifact Store (Volume) :** Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`. Ce dossier est monté comme volume partagé sur `mlflow`, `mlops-training` et `api`.
-* **Préchargement et Lazy Loading :** Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
+* **Backend Store (BDD) :**
+MLflow est interconnecté à l'instance PostgreSQL. Il structure nativement ses tables SQL dans la base `waterflow_db`.
+* **Artifact Store (Volume) :**
+Les fichiers sérialisés des modèles sont enregistrés sur le disque de la machine hôte dans le répertoire local `./mlruns_artifacts`   
+Ce dossier est monté comme volume partagé sur `mlflow`, `mlops-training` et `api`.
+* **Préchargement et Lazy Loading :**
+Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
 
 ### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
