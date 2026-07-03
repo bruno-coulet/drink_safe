@@ -90,30 +90,6 @@ async def ingerer_fiche_laboratoire(
         "file": (nom_fichier, contenu_fichier, file.content_type)
     }
 
-    # try:
-    #     reponse_externe = requests.post(
-    #         OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=15
-    #     )
-
-    #     if reponse_externe.status_code != 200:
-    #         raise HTTPException(
-    #             status_code=status.HTTP_502_BAD_GATEWAY,
-    #             detail=f"Le service OCR.space a répondu avec une erreur (Code {reponse_externe.status_code})."
-    #         )
-
-    #     resultat_json = reponse_externe.json()
-
-    # except requests.exceptions.Timeout:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-    #         detail="Le service OCR.space n'a pas répondu dans le temps imparti (Timeout)."
-    #     )
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail=f"Erreur lors de la communication avec le service OCR : {str(e)}"
-    #     )
-
     try:
         # Chronomètre l'appel pour nos logs
         t0 = time.time()
@@ -133,10 +109,10 @@ async def ingerer_fiche_laboratoire(
 
     except requests.RequestException as e:
 
-        # Affiche l'erreur réelle et explicite dans le terminal
-        print(f"ocr_call_failed : {e}")
+        # # Affiche l'erreur réelle et explicite dans le terminal
+        # print(f"ocr_call_failed : {e}")
 
-        # --- 2. LOG STRUCTURÉ JSON & MÉTRIQUE ---
+        # --- LOG STRUCTURÉ JSON & MÉTRIQUE ---
         duration_ms = int((time.time() - t0) * 1000)
         logger.error(
             "ocr_call_failed",
@@ -149,7 +125,7 @@ async def ingerer_fiche_laboratoire(
         )
         OCR_FAILURES.inc() # Alerte Grafana/Prometheus
 
-        # --- 3. FALLBACK GRACIEUX ---
+        # --- FALLBACK GRACIEUX ---
         # Ne crashe pas l'API, renvoie un statut d'attente à l'utilisateur.
         return {
             "status": "pending",

@@ -92,6 +92,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus  # Sauvegarde des métriques
     depends_on:
       - api
 
@@ -101,7 +102,12 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana # <-- NOUVEAU : Sauvegarde de vos tableaux de bord
+
 
 volumes:
   postgres_waterflow_data:
     driver: local
+  prometheus_data:
+  grafana_data:
