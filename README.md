@@ -23,7 +23,7 @@ Réalisé sous l'environnement WSL2, le système intègre :
 
 L'application est segmentée en couches isolées (présentation, logicielle/inférence, données) communiquant par HTTP. La couche données sépare le stockage des métadonnées MLflow (PostgreSQL) de celui des artefacts binaires (volume partagé).
 
-![Architecture Waterflow 2](img/architecture_v.png)
+![Architecture Waterflow 2](img/archi_drink_safe.png)
 
 ## Jeu de données
 Le jeu de données contient :
