@@ -1,0 +1,35 @@
+---
+config:
+  theme: dark
+---
+graph LR
+    subgraph Frontend Flask : Port 5001
+        Exploitation[Responsable d'exploitation<br/>Mot de passe]
+        Analystes[Analyste Qualité<br/>Mot de passe]
+        Client[Client / Agent de terrain<br/>Clé API]
+    end
+    subgraph Conteneur Docker : Backend
+        API{API Unique Modulaire<br/>FastAPI : 8000}
+        R_Data[ /data ]
+        R_Predict[ /predict ]
+        R_OCR[ /ocr ]
+        
+        API --- R_Data
+        API --- R_Predict
+        API --- R_OCR
+    end
+    subgraph Conteneurs & Volumes
+        MLflow[Serveur MLflow : 5000]
+        DB[(PostgreSQL 16 : 5432<br/>Données + Métadonnées)]
+        Vol_ML[\Volume Partagé<br/>Artefacts .pkl/]
+    end
+    OCR[Service Externe<br/>OCR.space]
+    Exploitation -- HTTP / localhost --> API
+    Analystes -- HTTP / localhost --> API
+    Client -- HTTP / localhost --> API
+    R_Data --> DB
+    API -. Lazy Loading .-> Vol_ML
+    R_OCR -. Fichier image/PDF .-> OCR
+    
+    MLflow -- Indexation --> DB
+    MLflow -- Sauvegarde Modèles --> Vol_ML

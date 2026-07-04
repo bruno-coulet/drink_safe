@@ -74,6 +74,8 @@ Afin de rendre l'infrastructure hautement lisible et d'éliminer les conflits de
 - mlops-training
     Pipeline éphémère d'entraînement et d'équilibrage des modèles.
 
+![architecture drink safe](../img/archi_drink_safe.png)
+
 ## 3. Modularité de l'API FastAPI
 Pour éviter un "surcoût" (overhead) de communication et la complexité de déploiement de multiples microservices, l'API unique consolide les modules dans des fichiers de routes isolés ``src/routes/`` :
 
