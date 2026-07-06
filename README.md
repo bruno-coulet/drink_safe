@@ -277,7 +277,7 @@ docker compose up mlops-training
 #### Relancer le pipeline d'entraînement
  générer les nouvelles versions des modèles dans MLflow
 
- L'option ``--build`` est indispensable chaque fois qu'un fichier Python qui s'exécute dans un conteneur à été modifié :
+ Si l'entrainement des models à été modifié, l'option ``--build`` est indispensable (chaque fois qu'un fichier Python qui s'exécute dans un conteneur à été modifié) :
 ```bash
 docker compose up -d --build mlops-training
 
