@@ -1,7 +1,20 @@
 # Drink safe
-## Centralisation API Unique, Ingestion OCR & MLOps
+## Plateforme, API Unique, Ingestion OCR & MLOps
 
-## Contexte du projet
+## Sommaire
+1. [Contexte du projet](#contexte-du-projet)
+2. [Jeu de données](#jeu-de-données)
+3. [Architecture & Stack Technique](#architecture-&-stack-technique)
+4. [Guide de Lancement & Exécution](#guide-de-lancement--exécution)
+   - [4.1 Pré-requis et Configuration de l'Authentification](#41-pre-requis)
+   - [4.2 Lancement en mode Production (Docker)](#42-production)
+   - [4.3 Lancement en mode Développement (Local)](#43-developpement)
+   - [4.4 Entraînement des modèles (MLOps)](#44-entrainement)
+5. [Fonctionnement & API REST](#fonctionnement--api-rest)
+6. [Interface Web & Garde-fous métiers](#interface-web)
+7. [Limites connues](#limites-connues)
+
+## 1. Contexte du projet
 Ce projet est réalisé dans le cadre d'un [bachelor en développement en intelligence artificielle](https://laplateforme.io/bachelor-it/developpeur-en-intelligence-artificielle/).
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
@@ -19,13 +32,8 @@ Réalisé sous l'environnement WSL2, le système intègre :
     - les prédictions (Model) protégées par des garde-fous sanitaires.
 - un serveur de tracking et registre de modèles d'Intelligence Artificielle (MLflow) connecté à une base PostgreSQL.
 
-## Architecture globale
 
-L'application est segmentée en couches isolées (présentation, logicielle/inférence, données) communiquant par HTTP. La couche données sépare le stockage des métadonnées MLflow (PostgreSQL) de celui des artefacts binaires (volume partagé).
-
-![Architecture Waterflow 2](img/archi_drink_safe.png)
-
-## Jeu de données
+## 2. Jeu de données
 Le jeu de données contient :
 - 3 276 étendues d'eau différentes (observations)
 - 9 mesures physico-chimiques de la qualité de l'eau (features)
@@ -38,61 +46,15 @@ recall sur la classe non-potable est la métrique métier prioritaire ici : mini
 Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que son [descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
 
 
----
+## 3. Architecture & Stack Technique.
 
-## Quickstart (Production)
+### Architecture globale
 
-Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
+L'application est segmentée en couches isolées (présentation, logicielle/inférence, données) communiquant par HTTP. La couche données sépare le stockage des métadonnées MLflow (PostgreSQL) de celui des artefacts binaires (volume partagé).
 
-### 1. Démarrer l'infrastructure et l'API
-Démarrer **Docker Desktop**
-Avec intégration WSL2 : settings/ressources/wsl integration
+![Architecture Waterflow 2](img/archi_drink_safe.png)
 
-**Déployement de l'environnement**
-- Base de données
-- serveur MLflow
-- serveur API Unique
-```bash
-docker compose up -d
-```
-
-### 2. Si primo activation seulement : génerer les comptes admins
-Peupler la base de donées avec les profils "Analyste" et "Responsable d'Exploitation"
-```bash
-uv run scripts/auth/seed_admins.py
-```
-`uv run` lance un environnement virtuel complètement isolé et ne charge pas systématiquement le fichier `.env`.
-Dans ce cas, il faut forcer l'outil `uv` à injecter lui-même les variables du fichier `.env` au moment de lancer le script grâce au paramètre `--env-file`:
-```bash
-uv run --env-file .env python scripts/auth/seed_admins.py
-```
-
-### 2. Interface Frontend (Streamlit)
-
-Déployer l'IHM finale destinée aux experts et administrateurs depuis `localhost` :
-
-
-```bash
-cd front && uv run python app.py
-# ou
-uv run flask --app front/app run --debug --port 5001
-```
-
-Interface utilisateur
-http://127.0.0.1:5001
-
-L'API Unique et sa documentation Swagger
-http://127.0.0.1:8000/docs
-
-L'interface de suivi MLflow
-http://127.0.0.1:5000
-
-Interface monitoring
-http://localhost:3000/
-
----
-
-## Stack Technique Fixe
+### Stack Technique Fixe
 
 * **Système d'exploitation :** Windows 11 avec WSL2 (Ubuntu)
 * **Langage :** Python 3.12 (scikit-learn, xgboost, pandas, fastapi, streamlit)
@@ -113,15 +75,6 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 ### Architecture de la Stack Réseau
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
 
-<!-- | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
-| :--- | :--- | :--- | :--- | :--- |
-| **Interface UI** | Flask | 5001 | Hôte local (WSL2) | Présentation IHM (Client, Analyste, Exploitation) et téléversement OCR. |
-| **API Unique** | FastAPI (`api`) | 8000 | Conteneur Docker | Point d'entrée unifié : gestion clients, ingestion OCR, persistance SQL et inférence IA. |
-| **Registre MLOps** | MLflow (`mlflow`) | 5000 | Conteneur Docker | Gestion du cycle de vie des modèles, du tracking d'expériences et du Model Registry. |
-| **Base de Données** | PostgreSQL 16 (`postgres`) | 5432 | Conteneur Docker | SGBDR industriel unifié (Stockage applicatif métier + Tables de métadonnées MLflow). |
-| **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
-| **Métriques** | Prometheus | 9090 | Conteneur Docker | Scraping des métriques exposées par l'API (`/metrics/`) : volumes, erreurs, latence. |
-| **Supervision** | Grafana | 3000 | Conteneur Docker | Dashboard RED (Rate / Errors / Duration) et suivi de la santé OCR (`ocr_failures_total`). | -->
 
 | Composant | Framework / Image | Port | Mode de déploiement | Rôle principal |
 |---|---|---|---|---|
@@ -133,12 +86,15 @@ L'infrastructure applicative est segmentée en services isolés communiquant par
 | **Dashboard RED** | Grafana | 3000 | Conteneur Docker (Volume persistant) | Tableaux de bord de santé du système pour le Responsable d'exploitation. |
 | **Pipeline ML** | Python (`mlops-training`) | Aucun | Conteneur Docker | Environnement éphémère d'entraînement et d'équilibrage des modèles. |
 
-
 ---
 
-## Architecture MLOps, Persistance Réseau & Sécurité
 
-### 1. Découplage BDD (Métadonnées) vs Volume Local (Artefacts)
+
+
+
+### Architecture MLOps, Persistance Réseau & Sécurité
+
+#### 1. Découplage BDD (Métadonnées) vs Volume Local (Artefacts)
 
 Afin d'éviter l'encombrement des tables relationnelles par des binaires lourds (`.pkl`), l'architecture sépare physiquement le stockage :
 
@@ -150,25 +106,163 @@ Ce dossier est monté comme volume partagé sur `mlflow`, `mlops-training` et `a
 * **Préchargement et Lazy Loading :**
 Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque modèle enregistré dans le registre MLflow. Si un modèle est absent du cache (registre mis à jour à chaud), un mécanisme de lazy loading le récupère à la volée depuis le volume partagé lors de la première requête de prédiction, garantissant la résilience aux redémarrages.
 
-### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
+#### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
 Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
 
 ---
 
-## Scénarios d'Exécution & Cycle de Vie
 
-**Pré-requis :** Créer un fichier `.env` à la racine du projet :
 
-```env
-POSTGRES_PASSWORD=MonMotDePasseSecurise123!
-OCR_SPACE_API_KEY=VotreCleApiOcrSpace
-SECRET_KEY=UneCleDeSessionSecurisee
+
+
+## 4. Guide de Lancement & Exécution
+
+Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
+
+### 4.1 Pré-requis et Configuration de l'Authentification
+Pour démarrer l'application, il faut configurer la sécurité à double niveau (Frontend/Backend).
+
+#### A) Créer un fichier d'environnement
+`.env` à la racine du projet (copier le `.env.example`).
+Docker Desktop doit être lancé (avec intégration WSL2 activée).
+
+
+```.env
+POSTGRES_PASSWORD=Mot_De_Passe_Securise
+
+OCR_SPACE_API_KEY=Cle_Api_Ocr_Space
+
+SECRET_KEY=Cle_De_Session_Securisee
 ```
 
-### Scénari
 
-#### Entraînement Initial (MLOps Pipeline)
+#### B) Démarrer l'infrastructure et l'API
+Démarrer **Docker Desktop**
+Avec intégration WSL2 : settings/ressources/wsl integration
+
+**Déployement de l'environnement**
+- Base de données
+- serveur MLflow
+- serveur API Unique
+```bash
+docker compose up -d
+```
+
+#### C) Configuration de l'Authentification (Génération des comptes Administrateurs)
+
+L'architecture repose sur une sécurité à double niveau entre l'interface utilisateur et l'API :
+*   **Le Frontend (Flask)**.  
+Authentifie les humains via un mot de passe classique.   
+Par sécurité, l'application s'attend à lire une empreinte hachée (`scrypt`) dans le fichier `.env`.
+
+*   **Le Backend (FastAPI)**.  
+N'accepte que des **Clés API** (pour la communication de machine à machine).   
+Le script d'amorçage lit ces clés en clair dans le `.env` et les hache en **SHA-256** avant de les stocker dans PostgreSQL.
+
+3 étapes pour initialiser les accès :
+
+#### D) Générer l'empreinte des mots de passe (Frontend)
+Dans le terminal, exécuter le script interactif de hachage :
+```bash
+uv run scripts/auth/hash_admin_passwords.py
+```
+
+Saisir les mots de passes choisis pour les comptes Analyste et Exploitation.
+Il retourne ensuite des chaînes sécurisées commençant par scrypt:32768:8:1$.....   
+Copier ces chaînes.
+
+##### Générer les Clés API et configurer le fichier .env
+Pour sécuriser le Backend, générer des clés d'accès robustes de manière cryptographique.   
+Dans le terminal, exécuter deux fois cette commande pour obtenir deux clés uniques :
+```bash
+python -c "import secrets; print('wf_admin_' + secrets.token_urlsafe(32))"
+```
+Dans le fichier `.env` à la racine du projet,
+Ajouter les mots de passe (pour vous) et les clés API générées (pour le système) :
+
+```bash
+# --- 1. ACCÈS INTERFACE WEB (FLASK) ---
+# hachages scrypt générés à l'étape 3.1
+
+ADMIN_ANALYSTE_PASSWORD_HASH=scrypt:32768:8:1$_hash_analyste...
+
+ADMIN_EXPLOITATION_PASSWORD_HASH=scrypt:32768:8:1$_hash_exploitation...
+
+# --- 2. ACCÈS API BACKEND (FASTAPI) ---
+# Clés API générées via la commande Python ci-dessus
+
+ADMIN_ANALYSTE_API_KEY=wf_admin_votre_cle_generee_1...  
+
+ADMIN_EXPLOITATION_API_KEY=wf_admin_votre_cle_generee_2...
+```
+
+##### Amorcer la base de données PostgreSQL
+Maintenant que le fichier `.env` est prêt   
+Injecter les profils administrateurs en base de données.  
+Il est impératif d'utiliser l'option `--env-file` pour forcer l'outil uv à lire les clés API :
+```bash
+uv run --env-file .env scripts/auth/seed_admins.py
+```
+Le script confirmera que les comptes ont bien été insérés.   
+Les clés API sont désormais sécurisées en SHA-256 dans la base de données.   
+Connection sur http://127.0.0.1:5001 avec les mots de passe en clair.
+
+---
+
+
+### 4.2 Lancement en mode Production
+
+Pour une exécution en localhot ou sur VPS, pour tester l'architecture complète avec ses conteneurs isolés.
+
+```shell
+docker compose up -d
+```
+
+Cela lance tous les services (BDD, MLflow, API) de manière isolée et persistante.
+
+Accès API sur http://127.0.0.1:8000.
+
+#### Interface Frontend (Flask)
+
+Déployer l'IHM finale destinée aux experts et administrateurs depuis `localhost` :
+
+
+```bash
+cd front && uv run python app.py
+# ou
+uv run flask --app front/app run --debug --port 5001
+```
+
+Interface utilisateur
+http://localhost:5001
+
+L'API Unique et sa documentation Swagger
+http://localhost:8000/docs
+
+L'interface de suivi MLflow
+http://localhost:5000
+
+Interface monitoring
+http://localhost:3000/
+
+
+### 4.3 Lancement en mode Développement
+Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
+
+Pré-requis :
+- Demarer les services de données lancés avec Docker
+    - `docker compose up -d postegres mlflow-back`
+- Arrêter le conteneur API
+    - `docker compose stop api`
+
+```shell
+uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Le mode --reload redémarre l'API instantanément à chaque sauvegarde de fichier.
+
+### 4.4 Entraînement des modèles (MLOps)
 
 Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
 
@@ -215,24 +309,7 @@ Le container `mlops-training` :
 
 ---
 
-### Couche "Garde-fou Métier" (Business Rules)
-
-Une couche de règles métiers strictes est exécutée en amont de l'inférence. Basée sur les seuils de l'OMS, elle rejette automatiquement l'échantillon (sans faire appel à l'IA) si les limites vitales sont dépassées :
-
-* pH < 6.5 ou pH > 8.5
-* Turbidité > 5.0 NTU
-* Chloramines > 4.0 mg/L
-* Trihalométhanes > 80 ppm
-
-Au-delà du garde-fou, l'inférence interroge **les 4 modèles** et renvoie pour chacun sa prédiction et un **score de probabilité de potabilité** (`predict_proba`). Le verdict retenu est le **consensus** (vote majoritaire ; en cas d'égalité, principe de précaution → Non Potable). Deux voies alimentent ce flux :
-
-- **Saisie directe** : `POST /api/predict/all` (crée le prélèvement et le consensus).
-- **Fiche OCR** : `POST /api/ocr/lab-report` crée le prélèvement, puis `POST /api/predict/from-prelevement/{id}` enrichit **la même ligne** avec le consensus (pas de doublon).
-
-<!-- ![Flux d'une prédiction](img/flux_prediction.png) -->
-
-
-## API REST — endpoints & exemples d'appels
+## 5. Fonctionnement & API REST
 
 Toutes les routes sont préfixées par `/api` et documentées via Swagger : http://127.0.0.1:8000/docs
 
@@ -272,45 +349,31 @@ curl -X POST http://127.0.0.1:8000/api/predict/from-prelevement/<prelevement_id>
   -H "X-API-Key: wf_live_..."
 ```
 
-## Interface web (Flask)
+## 6. Interface Web & Garde-fous métiers
+
+### Couche "Garde-fou Métier" (Business Rules)
+
+Une couche de règles métiers strictes est exécutée en amont de l'inférence. Basée sur les seuils de l'OMS, elle rejette automatiquement l'échantillon (sans faire appel à l'IA) si les limites vitales sont dépassées :
+
+* pH < 6.5 ou pH > 8.5
+* Turbidité > 5.0 NTU
+* Chloramines > 4.0 mg/L
+* Trihalométhanes > 80 ppm
+
+Au-delà du garde-fou, l'inférence interroge **les 4 modèles** et renvoie pour chacun sa prédiction et un **score de probabilité de potabilité** (`predict_proba`). Le verdict retenu est le **consensus** (vote majoritaire ; en cas d'égalité, principe de précaution → Non Potable). Deux voies alimentent ce flux :
+
+- **Saisie directe** : `POST /api/predict/all` (crée le prélèvement et le consensus).
+- **Fiche OCR** : `POST /api/ocr/lab-report` crée le prélèvement, puis `POST /api/predict/from-prelevement/{id}` enrichit **la même ligne** avec le consensus (pas de doublon).
 
 L'IHM expose trois volets :
 1. **Analyse par curseurs** : saisie manuelle d'un échantillon, soumis aux 4 modèles avec verdict consensus et tableau comparatif.
 2. **Ingestion OCR** : téléversement d'une fiche labo ; extraction automatique puis prédiction enchaînée sur la ligne créée.
 3. **Consultation (Analyste Qualité)** : vue globale des prélèvements avec filtres par client, provenance (Saisie / OCR), date et résultat, et indicateurs (volumes, répartition potables / non potables).
 
-## Limites connues
+## 7. Limites connues
 
 - **OCR partiel** : l'extraction par regex porte sur les 9 mesures physico-chimiques ; la `date` et les `observations` du document ne sont pas encore extraites (l'`ID client` provient de la clé API). Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée. En cas d'indisponibilité ou de quota atteint côté OCR.space (`IsErroredOnProcessing`, timeout), l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.
 - **Rôles experts simplifiés** : l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
 
-## Guide de lancement : Développement vs Production
 
-Pour piloter le projet, il est important de choisir le mode de lancement adapté :
 
-### Mode Production (Déploiement complet)
-
-Pour une exécution réelle (VPS) ou pour tester l'architecture complète avec ses conteneurs isolés.
-
-```shell
-docker compose up -d
-```
-
-Cela lance tous les services (BDD, MLflow, API) de manière isolée et persistante.
-
-Accès API sur http://127.0.0.1:8000.
-
-### Mode Développement (Édition de code)
-Utile si l'on modifie le code source (src/) pour voir les changements en temps réel.
-
-Pré-requis :
-- Demarer les services de données lancés avec Docker
-    - `docker compose up -d postegres mlflow-back`
-- Arrêter le conteneur API
-    - `docker compose stop api`
-
-```shell
-uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Le mode --reload redémarre l'API instantanément à chaque sauvegarde de fichier.
