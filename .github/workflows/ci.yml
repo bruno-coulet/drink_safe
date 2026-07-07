@@ -64,15 +64,7 @@ jobs:
           docker compose up -d api
           sleep 10
 
-      # - name: Exécution des tests (PyTest)
-      # # Surcharge d'env : écrase les variables d'environnement uniquement pour l'étape de Pytest
-      # # pour forcer le runner GitHub à utiliser son propre localhost (où les ports Docker sont exposés).
-      #   env:
-      #     DATABASE_URL: "postgresql://admin_waterflow:${{ secrets.DB_PASSWORD }}@127.0.0.1:5432/waterflow_db"
-      #     MLFLOW_TRACKING_URI: "http://127.0.0.1:5000"
 
-      # # Lance les tests
-      #   run: uv run pytest -v
       - name: Exécution des tests et calcul de la couverture (PyTest & pytest-cov)
         # Surcharge d'env : force le runner GitHub à utiliser son propre localhost
         # et indique où trouver le code source (PYTHONPATH)
@@ -82,6 +74,13 @@ jobs:
           PYTHONPATH: "." 
         # Lance les tests avec le rapport de couverture dans le terminal et en XML
         run: uv run pytest --cov=src --cov-report=term-missing --cov-report=xml tests/
+
+      # Sauvegarde le fichier XML généré pour pouvoir le télécharger
+      - name: Sauvegarder le rapport de couverture (XML)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
 
 
 
