@@ -1,5 +1,5 @@
 services:
-  # 1. BASE DE DONNÉES POSTGRESQL
+  # 1. BASE DE DONNEES POSTGRESQL
   postgres:
     image: postgres:16-alpine
     container_name: postgres
@@ -26,7 +26,7 @@ services:
       - "5000:5000"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      # On injecte les variables directement ici pour qu'Uvicorn les lise nativement au démarrage
+      # Injecte les variables directement ici pour qu'Uvicorn les lise nativement au démarrage
       - UVICORN_PROXY_HEADERS=true
       - UVICORN_FORWARDED_ALLOW_IPS=*
     depends_on:
@@ -60,7 +60,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./mlruns_artifacts:/app/artifacts
-      # 🚀 LIGNE MAGIQUE À AJOUTER : Force l'injection de ton code actuel sans passer par le cache de l'image
+      # Force l'injection du code actuel sans passer par le cache de l'image
       - ./src:/app/src
     restart: unless-stopped
 
@@ -103,7 +103,7 @@ services:
     depends_on:
       - prometheus
     volumes:
-      - grafana_data:/var/lib/grafana # <-- NOUVEAU : Sauvegarde de vos tableaux de bord
+      - grafana_data:/var/lib/grafana # Sauvegarde des tableaux de bord
 
 
 volumes:
