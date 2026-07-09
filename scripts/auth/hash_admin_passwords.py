@@ -2,8 +2,16 @@
 -------------------------------------------------------------------------------
 Projet : Waterflow 2
 Composant : Utilitaire — Génération des hash bcrypt pour les mots de passe admin
+
 Description : Génère les valeurs à placer dans .env pour les variables
-              ADMIN_ANALYSTE_PASSWORD_HASH et ADMIN_EXPLOITATION_PASSWORD_HASH.
+              ADMIN_ANALYSTE_PASSWORD_HASH
+                et
+              ADMIN_EXPLOITATION_PASSWORD_HASH.
+
+              Outil interactif qui permet de :
+                - taper des mots de passe en clair
+                - pour générer l'empreinte hachée en scrypt (pour le Frontend)
+            Il faut ensuite copier-coller manuellement l'empreinte hachée dans le .env
 
 Usage :
     uv run python scripts/hash_admin_passwords.py

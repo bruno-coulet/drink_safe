@@ -67,7 +67,7 @@ def migrer() -> None:
     print(f"\nMigration terminée : {migrees} migrée(s), {ignorees} ignorée(s).")
     if migrees > 0:
         print(
-            "\n⚠️  Les clés brutes ne sont plus utilisables. Les clients devront "
+            "\n Les clés brutes ne sont plus utilisables. Les clients devront "
             "utiliser les clés fournies avant migration ou en régénérer via POST /api/clients."
         )
 

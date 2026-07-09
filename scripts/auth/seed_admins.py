@@ -3,9 +3,13 @@
 Projet : Waterflow 2
 Composant : Script de Seeding — Comptes Techniques Admin
 Description : Crée en base de données les deux entrées techniques utilisées
-              par le front Flask pour appeler l'API au nom des admins.
-              A exécuter une seule fois après `docker compose up`.
+              par le front Flask pour appeler l'API au nom des admins :
 
+                - lis les valeurs  placées dans le fichier .env
+                - hache les clés API (Backend) en SHA-256
+                - injecte automatiquement les profils adminis
+
+              A exécuter une seule fois après `docker compose up`.
 Usage :
     uv run python scripts/seed_admins.py
 -------------------------------------------------------------------------------

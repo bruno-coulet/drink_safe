@@ -34,16 +34,28 @@ Réalisé sous l'environnement WSL2, le système intègre :
 
 
 ## 2. Jeu de données
+
+### composition
 Le jeu de données contient :
 - 3 276 étendues d'eau différentes (observations)
 - 9 mesures physico-chimiques de la qualité de l'eau (features)
 - une étiquette binaire (1 = potable, 0 = non potable)
 
-recall sur la classe non-potable est la métrique métier prioritaire ici : minimiser les cm_fp.
- sklearn calcule le recall sur la classe positive (1 = Potable) par défaut, ce qui ne correspond pas à cet objectif.
+Le jeu de donnée n'est pas stocké dans le dépôt Git.
+Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que son [descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
 
+### Cible et métrique approprié
+L'objectif est de prédire quand l'eau est **non potable**.
 
-Il n'est pas stocké dans le dépôt Git pour des raisons d'optimisation de l'espace. Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que son [descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
+La cible est la valeur 0 de l'étiquette binaire potable/non potable
+
+Par défaut, `sklearn` calcule le **recall** sur la *classe positive (1 = Potable)*
+Ce n'est pas adapté à notre objectif
+
+Il faut minimiser les "faux positifs" *cm_fp : confusion matrix false positive*
+
+**Métrique métier prioritaire :** recall sur la *classe 0 = non-potable*
+
 
 
 ## 3. Architecture & Stack Technique.
@@ -70,7 +82,7 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 |-|-|
 | `data/raw/water_potability.csv` | Jeu de données brut d'origine|
 | `data/processed/water_imputed.csv` | Données imputées par la médiane — base d'entraînement des 4 modèles|
-| `data/processed/water_std.csv` | Version standardisée (référence EDA). En production, la standardisation requise par la Régression Logistique et le MLP est **intégrée à leur `Pipeline` scikit-learn**, donc appliquée à l'identique à l'entraînement et à l'inférence.|
+| `data/processed/water_std.csv` | Version standardisée [EDA](notebooks/eda.ipynb). En production, la standardisation requise par la Régression Logistique et le MLP est **intégrée à leur `Pipeline` scikit-learn**, donc appliquée à l'identique à l'entraînement et à l'inférence.|
 
 ### Architecture de la Stack Réseau
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
@@ -118,94 +130,92 @@ Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut
 
 ## 4. Guide de Lancement & Exécution
 
-Cette procédure permet de démarrer immédiatement l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
+Procédure pour démarrer l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
 ### 4.1 Pré-requis et Configuration de l'Authentification
-Pour démarrer l'application, il faut configurer la sécurité à double niveau (Frontend/Backend).
 
-#### A) Créer un fichier d'environnement
-`.env` à la racine du projet (copier le `.env.example`).
-Docker Desktop doit être lancé (avec intégration WSL2 activée).
+Pour démarrer l'application, il faut configurer la sécurité à double niveau entre l'interface utilisateur (Frontend) et l'API(Backend).
+
+*   **Le Frontend (Flask)**.
+Authentifie les humains via un mot de passe classique.
+
+Par sécurité, l'application s'attend à lire une empreinte hachée (`scrypt`) dans le fichier `.env`.
+
+*   **Le Backend (FastAPI)**.
+N'accepte que des **Clés API** (pour la communication de machine à machine).
 
 
-```.env
-POSTGRES_PASSWORD=Mot_De_Passe_Securise
-
-OCR_SPACE_API_KEY=Cle_Api_Ocr_Space
-
-SECRET_KEY=Cle_De_Session_Securisee
-```
-
+#### A) Fichier d'environnement
+- Copier le fichier`.env.example` à la racine du projet
+- le renommer `.env`
 
 #### B) Démarrer l'infrastructure et l'API
 Démarrer **Docker Desktop**
-Avec intégration WSL2 : settings/ressources/wsl integration
+L' intégration WSL2 doit être activée : settings/ressources/wsl integration
 
-**Déployement de l'environnement**
-- Base de données
-- serveur MLflow
-- serveur API Unique
+**Déployement des containers de l'environnement**
+- postgres  ----Base de données
+- mlflow  ------serveur MLflow
+- api  ----------serveur API Unique
+
+via la commande :
 ```bash
 docker compose up -d
 ```
 
 #### C) Configuration de l'Authentification (Génération des comptes Administrateurs)
 
-L'architecture repose sur une sécurité à double niveau entre l'interface utilisateur et l'API :
-*   **Le Frontend (Flask)**.  
-Authentifie les humains via un mot de passe classique.   
-Par sécurité, l'application s'attend à lire une empreinte hachée (`scrypt`) dans le fichier `.env`.
+>Les scripts d'authentification sont dans le sous répertoire `scripts/auth/`
 
-*   **Le Backend (FastAPI)**.  
-N'accepte que des **Clés API** (pour la communication de machine à machine).   
-Le script d'amorçage lit ces clés en clair dans le `.env` et les hache en **SHA-256** avant de les stocker dans PostgreSQL.
+
+Le script d'amorçage `seed_admins.py` lit les clés en clair dans le `.env` et les hache en **SHA-256** avant de les stocker dans PostgreSQL.
 
 3 étapes pour initialiser les accès :
 
 #### D) Générer l'empreinte des mots de passe (Frontend)
-Dans le terminal, exécuter le script interactif de hachage :
+1. Exécuter le script interactif de hachage `hash_admin_passwords.py` dans un terminal:
 ```bash
 uv run scripts/auth/hash_admin_passwords.py
 ```
 
-Saisir les mots de passes choisis pour les comptes Analyste et Exploitation.
-Il retourne ensuite des chaînes sécurisées commençant par scrypt:32768:8:1$.....   
-Copier ces chaînes.
-
-##### Générer les Clés API et configurer le fichier .env
-Pour sécuriser le Backend, générer des clés d'accès robustes de manière cryptographique.   
-Dans le terminal, exécuter deux fois cette commande pour obtenir deux clés uniques :
-```bash
-python -c "import secrets; print('wf_admin_' + secrets.token_urlsafe(32))"
-```
-Dans le fichier `.env` à la racine du projet,
-Ajouter les mots de passe (pour vous) et les clés API générées (pour le système) :
+2. Saisir les mots de passes choisis pour les comptes **Analyste** et **Exploitation**.
+3. Le scripts retourne des chaînes sécurisées commençant par *scrypt:32768:8:1$.....*
+4. Copier ces chaînes
+5. Coller le chaînes dans `.env`
 
 ```bash
 # --- 1. ACCÈS INTERFACE WEB (FLASK) ---
-# hachages scrypt générés à l'étape 3.1
+# hachages scrypt générés par hash_admin_passwords.py
 
 ADMIN_ANALYSTE_PASSWORD_HASH=scrypt:32768:8:1$_hash_analyste...
-
 ADMIN_EXPLOITATION_PASSWORD_HASH=scrypt:32768:8:1$_hash_exploitation...
+```
 
+#### Générer les Clés API et configurer le fichier .env
+Pour sécuriser le Backend, il faut générer des clés d'accès robustes de manière cryptographique.
+Dans le terminal, exécuter deux fois cette commande pour obtenir deux clés uniques :
+```bash
+python -c "import secrets; print('drink_admin_' + secrets.token_urlsafe(32))"
+```
+
+Ajouter les clés API générées (pour le système) au fichier `.env`:
+
+```bash
 # --- 2. ACCÈS API BACKEND (FASTAPI) ---
 # Clés API générées via la commande Python ci-dessus
 
-ADMIN_ANALYSTE_API_KEY=wf_admin_votre_cle_generee_1...  
-
-ADMIN_EXPLOITATION_API_KEY=wf_admin_votre_cle_generee_2...
+ADMIN_ANALYSTE_API_KEY=drink_admin_cle_analyste...
+ADMIN_EXPLOITATION_API_KEY=drink_admin_cle_exploitation...
 ```
 
-##### Amorcer la base de données PostgreSQL
-Maintenant que le fichier `.env` est prêt   
-Injecter les profils administrateurs en base de données.  
+#### Amorcer la base de données PostgreSQL
+Maintenant que le fichier `.env` est prêt, il faut unjecter les profils administrateurs en base de données.
 Il est impératif d'utiliser l'option `--env-file` pour forcer l'outil uv à lire les clés API :
 ```bash
 uv run --env-file .env scripts/auth/seed_admins.py
 ```
-Le script confirmera que les comptes ont bien été insérés.   
-Les clés API sont désormais sécurisées en SHA-256 dans la base de données.   
+Le script confirmera que les comptes ont bien été insérés.
+Les clés API sont désormais sécurisées en SHA-256 dans la base de données.
 Connection sur http://127.0.0.1:5001 avec les mots de passe en clair.
 
 ---
@@ -260,14 +270,14 @@ Pré-requis :
 uv run uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Le mode --reload redémarre l'API instantanément à chaque sauvegarde de fichier.
+Le mode `--reload` redémarre l'API instantanément à chaque sauvegarde de fichier.
 
 ### 4.4 Entraînement des modèles (MLOps)
 
-Pour entraîner les modèles et populer le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
+Pour entraîner les modèles et alimenter le registre MLflow (à exécuter lors du premier déploiement ou pour mettre à jour les modèles) :
 
-1. Vérifier que l'infrastructure de base tourne (`postegres` et `mlflow`).
-2. Lancez le conteneur d'entraînement éphémère :
+1. Vérifier que l'infrastructure de base tourne (containers `postegres` et `mlflow`).
+2. Lancez le conteneur d'entraînement éphémère `mlops-training` :
 
 ```bash
 docker compose up mlops-training
@@ -284,11 +294,19 @@ docker compose up -d --build mlops-training
 # suivre l'entrainement
 docker logs -f mlops-training
 ```
-Le conteneur va s'exécuter, ré-entraîner les 4 modèles, enregistrer les nouveaux .pkl dans le volume partagé, calculer les métriques et les envoie à MLflow, puis s'arrêter proprement
+Le conteneur  `mlops-training` va s'exécuter :
+- ré-entraîner les 4 modèles
+- enregistrer les nouveaux .pkl (artifacts binaires) dans le volume partagé
+- calculer les métriques
+- envoyer les métriques à MLflow
+- s'arrêter proprement (`exited with code 0`)
 
+>Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.
 
 Il faut ensuite mettre à jour l'API
+
 "Lazy Loading" : l'API garde les modèles en cache (RAM) après la première prédiction.
+
 Pour la forcer à télécharger les nouveaux modèles, il faut vider le cache en la redémarrant :
 ```bash
 docker restart api
@@ -296,13 +314,6 @@ docker restart api
 
 ---
 
-*Note : Ce conteneur intègre une temporisation native (`sleep 15`) pour attendre la pleine disponibilité du serveur MLflow avant de lancer les calculs.*
-
-Le container `mlops-training` :
-- entraîne les 4 architectures
-- publie les métriques
-- écrit les artefacts binaires dans le volume partagé
-- s'arrête proprement (`exited with code 0`).
 
 <!-- ![Pipeline d'entraînement MLOps](img/pipeline_mlops.svg) -->
 <img src="img/pipeline_mlops.svg" alt="Pipeline d'entraînement MLOps" style="width:40%;">
@@ -328,7 +339,10 @@ Toutes les routes sont préfixées par `/api` et documentées via Swagger : http
 
 ### Compte de test
 
-Aucun compte n'est préchargé : un administrateur crée d'abord un client, ce qui renvoie la clé API à réutiliser dans l'en-tête `X-API-Key`.
+Aucun compte client n'est préchargé.
+L'administrateur **responsable d'exploitation** doit se connecter pour créer un client.
+
+Chaque création de client renvoie la clé API à réutiliser dans l'en-tête `X-API-Key`.
 
 ```bash
 # 1. Créer un client (récupérer "api_key" dans la réponse)
@@ -372,8 +386,22 @@ L'IHM expose trois volets :
 
 ## 7. Limites connues
 
-- **OCR partiel** : l'extraction par regex porte sur les 9 mesures physico-chimiques ; la `date` et les `observations` du document ne sont pas encore extraites (l'`ID client` provient de la clé API). Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée. En cas d'indisponibilité ou de quota atteint côté OCR.space (`IsErroredOnProcessing`, timeout), l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.
-- **Rôles experts simplifiés** : l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
+**OCR partiel** :
+
+- l'extraction par regex porte sur les 9 mesures physico-chimiques
+- la `date` et les `observations` du document ne sont pas encore extraites
+
+- l'`ID client` provient de la clé API.
+
+- Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée.
+- En cas d'indisponibilité ou de quota OCR.space atteint
+  (`IsErroredOnProcessing`, timeout)
+  l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.
+
+
+**Rôles experts simplifiés** :
+
+l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
 
 
 
