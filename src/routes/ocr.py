@@ -74,7 +74,8 @@ async def ingerer_fiche_laboratoire(
     ocr_api_key: Optional[str] = os.getenv("OCR_SPACE_API_KEY")
     if not ocr_api_key:
         # Permet d'éviter un blocage complet si la clé n'est pas encore configurée (Scénario d'incident)
-        ocr_api_key = "helloworld"  # Clé publique de test fournie par OCR.space
+        # Clé publique de test fournie par OCR.space
+        ocr_api_key = "helloworld"
 
     # 2. Lecture du fichier binaire
     contenu_fichier = await file.read()
@@ -83,15 +84,19 @@ async def ingerer_fiche_laboratoire(
     # 3. Envoi de la requête HTTP Multi-part vers OCR.space
     payload_ocr: Dict[str, Any] = {
         "apikey": ocr_api_key,
-        "language": "fre",  # Parsing optimisé pour les fiches en français
-        "isOverlayRequired": "false"
+        "language": "fre",             # Gestion des accents français
+        "isTable": "true",             # Maintien de l'alignement des valeurs
+        "isOverlayRequired": "false",  # Optimisation réseau et RAM
+        "scale": "true"                # Amélioration de la lecture
     }
+
+
     fichiers_ocr = {
         "file": (nom_fichier, contenu_fichier, file.content_type)
     }
 
     try:
-        # Chronomètre l'appel pour nos logs
+        # Chronomètre l'appel pour les logs
         t0 = time.time()
 
         reponse_externe = requests.post(
