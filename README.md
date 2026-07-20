@@ -130,6 +130,12 @@ Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut
 
 ## 4. Guide de Lancement & Exécution
 
+
+
+- [Pré-requis et Configuration de l'Authentification](#41-pré-requis-et-configuration-de-lauthentification)
+- [Lancement en mode Production](#42-lancement-en-mode-production)
+- [Lancement en mode Développement](#43-lancement-en-mode-développement)
+
 Procédure pour démarrer l'application complète en s'appuyant sur l'infrastructure Docker pré-configurée.
 
 ### 4.1 Pré-requis et Configuration de l'Authentification
