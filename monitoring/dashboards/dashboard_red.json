@@ -4,7 +4,8 @@
   "metadata": {
     "name": "adpf7x7",
     "namespace": "default",
-    "uid": "be184d8e-7872-466a-b50d-5ee01ecf679d",
+    // "uid": "be184d8e-7872-466a-b50d-5ee01ecf679d",
+    "uid": "prometheus_drink_safe",
     "resourceVersion": "1783065511261005",
     "generation": 5,
     "creationTimestamp": "2026-07-03T07:51:11Z",

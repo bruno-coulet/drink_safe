@@ -1,0 +1,12 @@
+# forçe Grafana à se connecter à Prometheus
+# fige l'identifiant avec la valeur prometheus_drink_safe
+# évite de perdre la configuration si le nom est modifié
+
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    uid: prometheus_drink_safe
