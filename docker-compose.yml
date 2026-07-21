@@ -107,6 +107,8 @@ services:
       - ./monitoring/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
       - ./monitoring/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
       - ./monitoring/dashboard_red.json:/var/lib/grafana/dashboards/d
+      - ./monitoring/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml
+
 
 volumes:
   postgres_waterflow_data:
