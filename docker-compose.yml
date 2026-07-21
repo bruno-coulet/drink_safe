@@ -27,6 +27,8 @@ services:
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       # Injecte les variables directement ici pour qu'Uvicorn les lise nativement au démarrage
+      # permet de contourner le problème de l'option --forwarded-allow-ips (DNS rebinding)
+      # qui ne fonctionne pas correctement avec Docker Compose
       - UVICORN_PROXY_HEADERS=true
       - UVICORN_FORWARDED_ALLOW_IPS=*
     depends_on:
@@ -48,8 +50,6 @@ services:
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - DATABASE_URL=postgresql://admin_waterflow:${POSTGRES_PASSWORD}@postgres:5432/waterflow_db
-      # En visant l'adresse IP 127.0.0.1 ou localhost mapée sur le port de la machine hôte, on contourne le DNS Rebinding
-      # - MLFLOW_TRACKING_URI=http://172.18.0.1:5000
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
     depends_on:

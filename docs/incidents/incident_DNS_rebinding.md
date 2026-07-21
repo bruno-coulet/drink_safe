@@ -22,19 +22,30 @@ L'erreur ne provenait pas d'une mauvaise URL, mais d'un mécanisme de sécurité
 
 
 
-#### 3. Correction (Le patch d'interception)
-Puisqu'il est compliqué (et peu sécurisé) de désactiver les sécurités internes du serveur MLflow, nous avons opté pour une ruse élégante côté FastAPI.
+#### 3. Correction (De l'applicatif vers l'infrastructure)
 
-Implémentation d'un patch d'interception HTTP qui surcharge dynamiquement la bibliothèque `requests` dans le fichier `src/config.py`. Juste avant que la requête ne parte vers MLflow, ce patch :
-* Met le processus en pause.
-* Conserve la bonne destination physique (il sait qu'il doit cibler le conteneur Docker nommé `mlflow`).
-* **Écrase l'en-tête Host à la volée** pour le remplacer par une valeur que MLflow acceptera sans broncher (ex: `localhost:5000`).
+##### Intention initiale (Solution logicielle) :
+Dans un premier temps, une solution de contournement consistant à créer un patch d'interception HTTP dans l'API (fichier `src/config.py`) a été envisagée. L'idée était de surcharger dynamiquement la bibliothèque requests pour écraser l'en-tête `Host` à la volée et usurper l'identité de `localhost:5000` lors de la communication avec MLflow.
 
-Résultat : MLflow reçoit la requête, lit l'en-tête modifié, la trouve parfaitement légitime, et autorise l'échange des modèles d'Intelligence Artificielle de manière fluide.
+##### Solution finale retenue (Implémentation Infrastructure) :
+La stratégie de résolution a évolué pour privilégier une approche plus robuste, centralisée au niveau de l'infrastructure plutôt que dans le code applicatif.
+Puisque le serveur MLflow s'appuie sur Uvicorn, nous avons configuré ce dernier pour accepter nativement le trafic réseau provenant du sous-réseau Docker. Le correctif a été appliqué directement dans le fichier `docker-compose.yml` en injectant les variables d'environnement suivantes au conteneur `mlflow` :
+
+- `UVICORN_PROXY_HEADERS=true`
+- `UVICORN_FORWARDED_ALLOW_IPS=*`
+
+
+**Résultat :**   
+Le serveur MLflow est explicitement configuré pour faire confiance au proxy interne de Docker.   
+Il lit les requêtes de l'API FastAPI, les trouve légitimes, et autorise l'échange des modèles d'Intelligence Artificielle de manière fluide, sans aucune modification du code source Python.
 
 #### 4. Retour d'Expérience et Prévention
-* **Leçon tirée :** Les environnements isolés comme Docker appliquent toujours les standards stricts de sécurité web (comme le contrôle des en-têtes `Host`).
-* **Bénéfice :** Cette solution de contournement (Spoofing d'en-tête en interne) permet de garantir la communication entre nos micro-services tout en préservant intactes les configurations de sécurité du serveur MLflow.
+Les environnements isolés comme Docker appliquent toujours les standards stricts de sécurité web (comme le contrôle des en-têtes Host).   
+Résoudre un problème réseau au niveau de l'infrastructure (Docker Compose) est souvent plus propre et plus stable que de développer des surcharges complexes (patches/spoofing) dans le code applicatif.
+
+**Bénéfice :**   
+Cette solution maintient le code de l'API agnostique des contraintes de l'infrastructure réseau.   
+Elle garantit la communication entre les micro-services en utilisant les mécanismes de sécurité prévus nativement par les serveurs web modernes (Uvicorn), assurant ainsi un Maintien en Condition Opérationnelle optimal.
 
 
 
