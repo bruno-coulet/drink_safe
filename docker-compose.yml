@@ -106,7 +106,7 @@ services:
       - grafana_data:/var/lib/grafana # Sauvegarde des tableaux de bord
       - ./monitoring/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
       - ./monitoring/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
-      - ./monitoring/dashboard_red.json:/var/lib/grafana/dashboards/d
+      - ./monitoring/dashboard_red.json:/var/lib/grafana/dashboards/dashboard_red.json
       - ./monitoring/alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml
 
 
