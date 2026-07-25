@@ -27,7 +27,10 @@ groups:
           - refId: 'A'
             datasourceUid: 'prometheus_drink_safe'
             model:
-              expr: 'rate(http_requests_total{endpoint="/api/ocr/lab-report",status=~"5.."}[5m]) > 0.1'
+              # expr: 'rate(http_requests_total{endpoint="/api/ocr/lab-report",status=~"5.."}[5m]) > 0.1'
+              # si l'OCR tombe en panne, l'API intercepte l'erreur réseau et renvoie à l'utilisateur un statut HTTP 201 (Pending) 
+              # Remplace l'ancienne écoute des codes 5xx par la métrique métier de l'OCR
+              expr: 'rate(ocr_failures_total[5m]) > 0'
               refId: 'A'
             relativeTimeRange:
               from: 300

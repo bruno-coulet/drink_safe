@@ -25,11 +25,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ocr", tags=["Ingestion & Traitement OCR"])
 
 
-# ------URL d'OCR.space ------
+
 OCR_SPACE_URL: str = "https://api.ocr.space/parse/image"
-# FAUSSE URL pour les tester le Fallback
+# FAUSSE URL à décommenter pour les tester le Fallback si OCR H.S.
 # OCR_SPACE_URL: str = "https://ooo.ooo.space/parse/image"
-# ----------------------------
 
 
 # Création d'une métrique spécifique pour surveiller la santé de l'OCR externe
@@ -98,46 +97,20 @@ async def ingerer_fiche_laboratoire(
     try:
         # Chronomètre l'appel pour les logs
         t0 = time.time()
-
         reponse_externe = requests.post(
             OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=30
         )
-
         if reponse_externe.status_code != 200:
             # lève une exception classique
             # pour qu'elle soit attrapée par le fallback plus bas.
             raise Exception(f"Bad Gateway (Code {reponse_externe.status_code})")
 
         resultat_json = reponse_externe.json()
+        # Suite du traitement normal si succès, sinon lève l'exception ci-dessous :
 
-        # Suite du traitement normal si succès...
-
-    except requests.RequestException as e:
-
-        # # Affiche l'erreur réelle et explicite dans le terminal
-        # print(f"ocr_call_failed : {e}")
-
-        # --- LOG STRUCTURÉ JSON & MÉTRIQUE ---
-        duration_ms = int((time.time() - t0) * 1000)
-        logger.error(
-            "ocr_call_failed",
-            extra={
-                "client_id": client_id,
-                "endpoint": "api.ocr.space",
-                "error": str(e), # enregistre l'erreur dynamique
-                "duration_ms": duration_ms
-            }
-        )
-        OCR_FAILURES.inc() # Alerte Grafana/Prometheus
-
-        # --- FALLBACK GRACIEUX ---
-        # Ne crashe pas l'API, renvoie un statut d'attente à l'utilisateur.
-        return {
-            "status": "pending",
-            "message": "Le service OCR est temporairement ralenti. Votre document est sauvegardé en attente de traitement asynchrone."
-        }
 
     except Exception as e:
+        # LOG STRUCTURÉ JSON & MÉTRIQUE (Centralisé)
         duration_ms = int((time.time() - t0) * 1000)
         logger.error(
             "ocr_call_failed",
@@ -148,12 +121,15 @@ async def ingerer_fiche_laboratoire(
                 "duration_ms": duration_ms
             }
         )
-        OCR_FAILURES.inc()
+        OCR_FAILURES.inc() # Alerte Grafana/Prometheus
 
+        # FALLBACK GRACIEUX (Message honnête et unique)
         return {
             "status": "pending",
-            "message": "Service OCR indisponible. Votre fichier est mis en file d'attente."
+            "message": "Le service d'analyse documentaire est temporairement indisponible. Veuillez soumettre votre prélèvement manuellement ou réessayer plus tard."
         }
+
+
 
 
     # 4. Analyse et parsing de la réponse d'OCR.space

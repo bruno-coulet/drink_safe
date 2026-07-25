@@ -120,7 +120,23 @@ Au démarrage, l'API précharge en mémoire (RAM) la dernière version de chaque
 
 #### 2. Parade contre le DNS Rebinding (Erreur HTTP 403)
 
-Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes (ex: `Host: mlflow:5000`). Un patch d'interception HTTP surcharge dynamiquement la bibliothèque `requests` dans l'API pour forcer l'en-tête attendu par le serveur et neutraliser ce blocage.
+Les serveurs HTTP exécutés dans un réseau Docker isolé rejettent par défaut les requêtes contenant des en-têtes d'hôtes virtuels internes
+
+ex: `Host: mlflow:5000`
+
+
+La parade se fait via une configuration du serveur Uvicorn, en injectant les variables d'environnement directement dans le `docker-compose.yml` :
+```yaml
+    environment:
+      - UVICORN_PROXY_HEADERS=true
+      - UVICORN_FORWARDED_ALLOW_IPS=*
+```
+
+Uvicorn les lit nativement au démarrage
+-  évite de polluer le code applicatif avec un patch
+- contourne le problème de l'option en ligne de commande `--forwarded-allow-ips` qui s'intègre souvent mal avec les scripts de démarrage de Docker Compose
+
+
 
 ---
 

@@ -16,9 +16,19 @@
 #### 2. Diagnostic (Analyse de l'En-tête Host et DNS Rebinding)
 L'erreur ne provenait pas d'une mauvaise URL, mais d'un mécanisme de sécurité réseau :
 
-* **Le fonctionnement normal (L'en-tête Host) :** Quand une API fait une requête HTTP vers un serveur, elle inclut une information invisible appelée l'en-tête `Host`. Cela indique au serveur distant le nom du site recherché (ex: `Host: google.com`).
-* **Le problème avec Docker :** Dans notre architecture Docker Compose, les conteneurs discutent entre eux en utilisant des noms internes virtuels. L'API FastAPI essaie donc de joindre le registre à l'adresse `http://mlflow:5000`. La requête part avec l'en-tête `Host: mlflow:5000`.
-* **La sécurité (L'erreur 403) :** Quand le serveur de MLflow reçoit cette requête, son pare-feu interne s'affole. Il est configuré pour répondre à `localhost` ou à son IP publique, mais ne reconnaît pas le nom `mlflow:5000`. Il suspecte une attaque par **DNS Rebinding** et rejette la requête.
+* **Le fonctionnement normal (L'en-tête Host)**<br>
+Quand une API fait une requête HTTP vers un serveur, elle inclut une information invisible appelée l'en-tête `Host`<br>
+Cela indique au serveur distant le nom du site recherché<br>
+ex: `Host: google.com`
+
+* **Le problème avec Docker**<br>
+Dans notre architecture Docker Compose, les conteneurs discutent entre eux en utilisant des noms internes virtuels.<br>
+ L'API essaie de joindre le registre des models à l'adresse `http://mlflow:5000`<br>
+ La requête part avec l'en-tête `Host: mlflow:5000`
+
+* **La sécurité (L'erreur 403)**<br>
+Quand le serveur de MLflow reçoit cette requête, son pare-feu interne s'affole. Il est configuré pour répondre à `localhost` ou à son IP publique, mais ne reconnaît pas le nom `mlflow:5000`<br>
+Il suspecte une attaque par **DNS Rebinding** et rejette la requête.
 
 
 
@@ -35,16 +45,16 @@ Puisque le serveur MLflow s'appuie sur Uvicorn, nous avons configuré ce dernier
 - `UVICORN_FORWARDED_ALLOW_IPS=*`
 
 
-**Résultat :**   
-Le serveur MLflow est explicitement configuré pour faire confiance au proxy interne de Docker.   
+**Résultat :**
+Le serveur MLflow est explicitement configuré pour faire confiance au proxy interne de Docker.
 Il lit les requêtes de l'API FastAPI, les trouve légitimes, et autorise l'échange des modèles d'Intelligence Artificielle de manière fluide, sans aucune modification du code source Python.
 
 #### 4. Retour d'Expérience et Prévention
-Les environnements isolés comme Docker appliquent toujours les standards stricts de sécurité web (comme le contrôle des en-têtes Host).   
+Les environnements isolés comme Docker appliquent toujours les standards stricts de sécurité web (comme le contrôle des en-têtes Host).
 Résoudre un problème réseau au niveau de l'infrastructure (Docker Compose) est souvent plus propre et plus stable que de développer des surcharges complexes (patches/spoofing) dans le code applicatif.
 
-**Bénéfice :**   
-Cette solution maintient le code de l'API agnostique des contraintes de l'infrastructure réseau.   
+**Bénéfice :**
+Cette solution maintient le code de l'API agnostique des contraintes de l'infrastructure réseau.
 Elle garantit la communication entre les micro-services en utilisant les mécanismes de sécurité prévus nativement par les serveurs web modernes (Uvicorn), assurant ainsi un Maintien en Condition Opérationnelle optimal.
 
 

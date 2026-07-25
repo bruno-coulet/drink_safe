@@ -114,15 +114,18 @@ def ocr():
             headers=headers,
             timeout=45,
         )
+
+        # Interception pacifique du code HTTP
+        # le frontend accepte le code 201 envoyé par l'API lors de l'erreur réseau comme un "succès technique"
+        # Il ne saute pas dans le bloc d'erreur
         if resp_ocr.status_code in [200, 201]:
             resultat_ocr = resp_ocr.json()
 
-            # --- GESTION DU FALLBACK ---
-            # On vérifie IMMÉDIATEMENT si on a reçu le statut d'attente
+            # --- FALLBACK - vérifie si on a reçu le statut d'attente (isolation du mode dégradé)
             if resultat_ocr.get("status") == "pending":
-                # On affiche le message de secours envoyé par l'API dans un bandeau jaune
+                # affiche le message envoyé par l'API dans un bandeau jaune
                 flash(resultat_ocr.get("message"), "warning")
-                # On redirige le client sans essayer d'afficher les mesures ni faire de prédiction
+                # redirige le client sans essayer d'afficher les mesures ni faire de prédiction
                 return redirect(url_for("client.dashboard"))
             # ------------------------------------------
 
@@ -151,13 +154,6 @@ def ocr():
 
 
 
-
-
-
-
-
-
-
 @client_bp.route("/export-rgpd")
 def export_data():
     """Génère un export CSV des données personnelles du client (Conformité RGPD)."""
@@ -165,18 +161,18 @@ def export_data():
     if not api_key:
         return redirect(url_for("auth.login"))
 
-    # 1. On interroge l'API FastAPI pour récupérer les données du client
+    # interroge l'API pour récupérer les données du client
     url_api = "http://127.0.0.1:8000/api/measurements"
     reponse = requests.get(url_api, headers={"X-API-Key": api_key})
 
     if reponse.status_code == 200:
         prelevements = reponse.json()
 
-        # 2. Création d'un fichier CSV en mémoire
+        # Création d'un fichier CSV en mémoire
         si = StringIO()
         writer = csv.writer(si)
 
-        # S'il y a des données, on écrit les en-têtes puis les lignes
+        # S'il y a des données, écrit les en-têtes puis les lignes
         if prelevements and isinstance(prelevements, list) and len(prelevements) > 0:
             # En-têtes basées sur les clés du premier dictionnaire
             writer.writerow(prelevements[0].keys())
@@ -185,7 +181,7 @@ def export_data():
         else:
             writer.writerow(["Aucune donnee associee a ce compte."])
 
-        # 3. LA PARTIE MANQUANTE : On crée la réponse et on la retourne !
+        # crée la réponse et la retourne
         output = Response(si.getvalue(), mimetype="text/csv")
         output.headers["Content-Disposition"] = "attachment; filename=mes_donnees_waterflow.csv"
         return output
