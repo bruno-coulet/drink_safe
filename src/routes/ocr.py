@@ -7,23 +7,35 @@ Description : Réception de fiches de laboratoire (PDF/Images), interconnexion
 -------------------------------------------------------------------------------
 """
 
-import os, time, re
+import logging
+import os
+import re
+import time
+from typing import Any
 
-from typing import Any, Dict, Optional
+import psycopg2
 import requests
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-import psycopg2
+from prometheus_client import Counter
 
 from src.config import settings
 from src.dependencies.auth import get_current_client
 
-from prometheus_client import Counter
-import logging
+
+# --- création des erreurs métier spécifiques pour le service OCR ---
+class OCRError(Exception):
+    """Exception métier levée en cas d'échec du service externe OCR.space."""
+    pass
+
+class DatabaseInsertError(Exception):
+    """Exception métier levée lorsqu'une insertion SQL échoue silencieusement."""
+    pass
+# --------------------------------------------------------------------
+
 # Initialisation du logger
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ocr", tags=["Ingestion & Traitement OCR"])
-
 
 
 OCR_SPACE_URL: str = "https://api.ocr.space/parse/image"
@@ -45,21 +57,30 @@ def _extraire_valeur_metrique(texte: str, motif: str, valeur_defaut: float) -> f
             pass
     return valeur_defaut
 
+
 @router.post(
     "/lab-report",
     status_code=status.HTTP_201_CREATED,
     summary="Ingestion d'une fiche laboratoire par OCR",
     responses={
-        201: {"description": "Prélèvement créé avec succès, renvoie l'ID et les données extraites."},
-        400: {"description": "Fichier illisible ou format non supporté (doit être PDF, JPG, PNG)."},
-        422: {"description": "Champs manquants : l'OCR n'a pas réussi à lire les mesures physico-chimiques obligatoires."},
-        504: {"description": "Timeout OCR : Le service externe OCR.space est injoignable ou met trop de temps à répondre."}
-    }
+        201: {
+            "description": "Prélèvement créé avec succès, renvoie l'ID et les données extraites."
+        },
+        400: {
+            "description": "Fichier illisible ou format non supporté (doit être PDF, JPG, PNG)."
+        },
+        422: {
+            "description": "Champs manquants : l'OCR n'a pas réussi à lire les mesures physico-chimiques obligatoires."
+        },
+        504: {
+            "description": "Timeout OCR : Le service externe OCR.space est injoignable ou met trop de temps à répondre."
+        },
+    },
 )
 async def ingerer_fiche_laboratoire(
-    file: UploadFile = File(..., description="Fiche laboratoire au format PDF, PNG ou JPG"),
-    client_id: str = Depends(get_current_client)
-) -> Dict[str, Any]:
+    file: UploadFile = File(..., description="Fiche laboratoire au format PDF, PNG ou JPG"), # noqa: B008
+    client_id: str = Depends(get_current_client),
+) -> dict[str, Any]:
     """Traite un rapport binaire via OCR.space et l'enregistre en base de données.
 
     Args:
@@ -70,7 +91,7 @@ async def ingerer_fiche_laboratoire(
         Dict[str, Any]: Données structurées extraites et identifiant de l'enregistrement.
     """
     # 1. Récupération de la clé API OCR.space depuis l'environnement
-    ocr_api_key: Optional[str] = os.getenv("OCR_SPACE_API_KEY")
+    ocr_api_key: str | None = os.getenv("OCR_SPACE_API_KEY")
     if not ocr_api_key:
         # Permet d'éviter un blocage complet si la clé n'est pas encore configurée (Scénario d'incident)
         # Clé publique de test fournie par OCR.space
@@ -81,35 +102,34 @@ async def ingerer_fiche_laboratoire(
     nom_fichier: str = file.filename if file.filename else "document_inconnu"
 
     # 3. Envoi de la requête HTTP Multi-part vers OCR.space
-    payload_ocr: Dict[str, Any] = {
+    payload_ocr: dict[str, Any] = {
         "apikey": ocr_api_key,
-        "language": "fre",             # Gestion des accents français
-        "isTable": "true",             # Maintien de l'alignement des valeurs
+        "language": "fre",  # Gestion des accents français
+        "isTable": "true",  # Maintien de l'alignement des valeurs
         "isOverlayRequired": "false",  # Optimisation réseau et RAM
-        "scale": "true"                # Amélioration de la lecture
+        "scale": "true",  # Amélioration de la lecture
     }
 
-
-    fichiers_ocr = {
-        "file": (nom_fichier, contenu_fichier, file.content_type)
-    }
+    fichiers_ocr = {"file": (nom_fichier, contenu_fichier, file.content_type)}
 
     try:
         # Chronomètre l'appel pour les logs
         t0 = time.time()
-        reponse_externe = requests.post(
-            OCR_SPACE_URL, data=payload_ocr, files=fichiers_ocr, timeout=30
+        reponse_externe = requests.post( # noqa: ASYNC210
+            # La norme moderne en environnement asynchrone n'est plus d'utiliser requests, mais son jumeau asynchrone moderne : httpx
+            OCR_SPACE_URL, 
+            data=payload_ocr, 
+            files=fichiers_ocr, 
+            timeout=30
         )
         if reponse_externe.status_code != 200:
-            # lève une exception classique
-            # pour qu'elle soit attrapée par le fallback plus bas.
-            raise Exception(f"Bad Gateway (Code {reponse_externe.status_code})")
+            # lève une exception métier spécifique pour qu'elle soit attrapée par le fallback plus bas.
+            raise OCRError(f"Bad Gateway (Code {reponse_externe.status_code})")
 
         resultat_json = reponse_externe.json()
         # Suite du traitement normal si succès, sinon lève l'exception ci-dessous :
 
-
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         # LOG STRUCTURÉ JSON & MÉTRIQUE (Centralisé)
         duration_ms = int((time.time() - t0) * 1000)
         logger.error(
@@ -118,19 +138,16 @@ async def ingerer_fiche_laboratoire(
                 "client_id": client_id,
                 "endpoint": "api.ocr.space",
                 "error": str(e),
-                "duration_ms": duration_ms
-            }
+                "duration_ms": duration_ms,
+            },
         )
-        OCR_FAILURES.inc() # Alerte Grafana/Prometheus
+        OCR_FAILURES.inc()  # Alerte Grafana/Prometheus
 
         # FALLBACK GRACIEUX (Message honnête et unique)
         return {
             "status": "pending",
-            "message": "Le service d'OCR est temporairement indisponible. Veuillez réessayer plus tard."
+            "message": "Le service d'OCR est temporairement indisponible. Veuillez réessayer plus tard.",
         }
-
-
-
 
     # 4. Analyse et parsing de la réponse d'OCR.space
     # Log de la réponse brute pour diagnostiquer les erreurs silencieuses
@@ -144,12 +161,12 @@ async def ingerer_fiche_laboratoire(
                 "client_id": client_id,
                 "error": str(error_msg),
                 "exit_code": resultat_json.get("OCRExitCode"),
-            }
+            },
         )
         OCR_FAILURES.inc()
         return {
             "status": "pending",
-            "message": "Le service OCR a rencontré une erreur de traitement (quota ou format non supporté). Votre fichier est mis en file d'attente."
+            "message": "Le service OCR a rencontré une erreur de traitement (quota ou format non supporté). Votre fichier est mis en file d'attente.",
         }
 
     # Extraction du texte brut fusionné de toutes les pages
@@ -160,16 +177,34 @@ async def ingerer_fiche_laboratoire(
 
     # 5. Extraction structurée des paramètres physico-chimiques (Regex)
     # L'algorithme cherche par exemple "pH : 7.4" ou "ph=7.4"
-    mesures: Dict[str, float] = {
-        "ph": _extraire_valeur_metrique(texte_brut_extrait, r"ph[:\s\s=]+([0-9.]+)", 7.2),
-        "Hardness": _extraire_valeur_metrique(texte_brut_extrait, r"durete[:\s\s=]+([0-9.]+)", 200.0),
-        "Solids": _extraire_valeur_metrique(texte_brut_extrait, r"solides[:\s\s=]+([0-9.]+)", 20000.0),
-        "Chloramines": _extraire_valeur_metrique(texte_brut_extrait, r"chloramines[:\s\s=]+([0-9.]+)", 3.5),
-        "Sulfate": _extraire_valeur_metrique(texte_brut_extrait, r"sulfate[:\s\s=]+([0-9.]+)", 330.0),
-        "Conductivity": _extraire_valeur_metrique(texte_brut_extrait, r"conductivite[:\s\s=]+([0-9.]+)", 420.0),
-        "Organic_carbon": _extraire_valeur_metrique(texte_brut_extrait, r"carbone[:\s\s=]+([0-9.]+)", 14.0),
-        "Trihalomethanes": _extraire_valeur_metrique(texte_brut_extrait, r"trihalomethanes[:\s\s=]+([0-9.]+)", 65.0),
-        "Turbidity": _extraire_valeur_metrique(texte_brut_extrait, r"turbidite[:\s\s=]+([0-9.]+)", 3.8)
+    mesures: dict[str, float] = {
+        "ph": _extraire_valeur_metrique(
+            texte_brut_extrait, r"ph[:\s\s=]+([0-9.]+)", 7.2
+        ),
+        "Hardness": _extraire_valeur_metrique(
+            texte_brut_extrait, r"durete[:\s\s=]+([0-9.]+)", 200.0
+        ),
+        "Solids": _extraire_valeur_metrique(
+            texte_brut_extrait, r"solides[:\s\s=]+([0-9.]+)", 20000.0
+        ),
+        "Chloramines": _extraire_valeur_metrique(
+            texte_brut_extrait, r"chloramines[:\s\s=]+([0-9.]+)", 3.5
+        ),
+        "Sulfate": _extraire_valeur_metrique(
+            texte_brut_extrait, r"sulfate[:\s\s=]+([0-9.]+)", 330.0
+        ),
+        "Conductivity": _extraire_valeur_metrique(
+            texte_brut_extrait, r"conductivite[:\s\s=]+([0-9.]+)", 420.0
+        ),
+        "Organic_carbon": _extraire_valeur_metrique(
+            texte_brut_extrait, r"carbone[:\s\s=]+([0-9.]+)", 14.0
+        ),
+        "Trihalomethanes": _extraire_valeur_metrique(
+            texte_brut_extrait, r"trihalomethanes[:\s\s=]+([0-9.]+)", 65.0
+        ),
+        "Turbidity": _extraire_valeur_metrique(
+            texte_brut_extrait, r"turbidite[:\s\s=]+([0-9.]+)", 3.8
+        ),
     }
 
     # 6. Persistance dans PostgreSQL sous la provenance "OCR"
@@ -183,17 +218,26 @@ async def ingerer_fiche_laboratoire(
     """
 
     try:
-        with psycopg2.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(query_insert, (
-                    client_id, mesures["ph"], mesures["Hardness"], mesures["Solids"],
-                    mesures["Chloramines"], mesures["Sulfate"], mesures["Conductivity"],
-                    mesures["Organic_carbon"], mesures["Trihalomethanes"],
-                    mesures["Turbidity"], f"Fichier d'origine : {nom_fichier}"
-                ))
+        with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+                cursor.execute(
+                    query_insert,
+                    (
+                        client_id,
+                        mesures["ph"],
+                        mesures["Hardness"],
+                        mesures["Solids"],
+                        mesures["Chloramines"],
+                        mesures["Sulfate"],
+                        mesures["Conductivity"],
+                        mesures["Organic_carbon"],
+                        mesures["Trihalomethanes"],
+                        mesures["Turbidity"],
+                        f"Fichier d'origine : {nom_fichier}",
+                    ),
+                )
                 row = cursor.fetchone()
                 if row is None:
-                    raise Exception("INSERT n'a retourné aucun ID de prélèvement")
+                    raise DatabaseInsertError("INSERT n'a retourné aucun ID de prélèvement")
                 prelevement_id: int = row[0]
                 conn.commit()
 
@@ -201,12 +245,11 @@ async def ingerer_fiche_laboratoire(
             "status": "Succès",
             "message": "La fiche laboratoire a été numérisée et enregistrée.",
             "prelevement_id": prelevement_id,
-            "extracted_data": mesures
+            "extracted_data": mesures,
         }
 
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur lors de l'archivage SQL du prélèvement OCR : {str(e)}"
+            detail=f"Erreur lors de l'archivage SQL du prélèvement OCR : {e}",
         )
-

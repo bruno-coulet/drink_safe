@@ -11,8 +11,9 @@ Description : Application Flask multi-rôles exposant trois espaces distincts :
 """
 
 import os
-from flask import Flask, redirect, url_for
+
 from dotenv import load_dotenv
+from flask import Flask, redirect, url_for
 
 load_dotenv()
 
@@ -22,9 +23,9 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
+    from analyste import analyste_bp
     from auth import auth_bp
     from client import client_bp
-    from analyste import analyste_bp
     from exploitation import exploitation_bp
 
     app.register_blueprint(auth_bp)

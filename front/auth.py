@@ -12,9 +12,10 @@ Description : Gère le login et le logout pour les trois rôles.
 """
 
 import os
+
 import requests
-from werkzeug.security import check_password_hash
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -37,6 +38,7 @@ ADMIN_EXPLOITATION_API_KEY: str = os.getenv("ADMIN_EXPLOITATION_API_KEY", "")
 #     except requests.RequestException:
 #         return False
 
+
 def _valider_cle_client(api_key: str) -> dict | None:
     """Vérifie qu'une clé API client est valide et récupère ses données (RGPD)."""
     try:
@@ -46,7 +48,7 @@ def _valider_cle_client(api_key: str) -> dict | None:
             timeout=5,
         )
         if resp.status_code == 200:
-            return resp.json() # Retourne un dictionnaire (ex: {"client_id": "...", "nom_structure": "..."})
+            return resp.json()  # Retourne un dictionnaire (ex: {"client_id": "...", "nom_structure": "..."})
         return None
     except requests.RequestException:
         return None
@@ -73,7 +75,6 @@ def login():
         role = request.form.get("role", "client")
         credential = request.form.get("credential", "").strip()
 
-
         if not credential:
             flash("Identifiant ou mot de passe manquant.", "danger")
             return render_template("login.html")
@@ -92,35 +93,52 @@ def login():
 
             flash("Clé API invalide ou révoquée.", "danger")
 
-
         elif role == "analyste":
-            if _verifier_mot_de_passe(credential, ADMIN_ANALYSTE_HASH) and ADMIN_ANALYSTE_API_KEY:
+            if (
+                _verifier_mot_de_passe(credential, ADMIN_ANALYSTE_HASH)
+                and ADMIN_ANALYSTE_API_KEY
+            ):
                 session["role"] = "analyste"
                 session["api_key"] = ADMIN_ANALYSTE_API_KEY
 
                 # Interroge l'API avec la clé maître pour récupérer la dénomination en BDD
                 donnees_analyste = _valider_cle_client(ADMIN_ANALYSTE_API_KEY)
                 if donnees_analyste:
-                    session["client_id"] = donnees_analyste.get("client_id", "ID inconnu")
+                    session["client_id"] = donnees_analyste.get(
+                        "client_id", "ID inconnu"
+                    )
                     # On cherche "nom_structure" ou "denomination" selon votre nommage exact
-                    session["nom_structure"] = donnees_analyste.get("nom_structure", donnees_analyste.get("denomination", "Analyste Qualité"))
+                    session["nom_structure"] = donnees_analyste.get(
+                        "nom_structure",
+                        donnees_analyste.get("denomination", "Analyste Qualité"),
+                    )
                 else:
-                    session["nom_structure"] = "Expertise Qualité" # Valeur de secours
+                    session["nom_structure"] = "Expertise Qualité"  # Valeur de secours
                 # -------------
 
                 return redirect(url_for("analyste.dashboard"))
             flash("Mot de passe analyste incorrect.", "danger")
 
         elif role == "exploitation":
-            if _verifier_mot_de_passe(credential, ADMIN_EXPLOITATION_HASH) and ADMIN_EXPLOITATION_API_KEY:
+            if (
+                _verifier_mot_de_passe(credential, ADMIN_EXPLOITATION_HASH)
+                and ADMIN_EXPLOITATION_API_KEY
+            ):
                 session["role"] = "exploitation"
                 session["api_key"] = ADMIN_EXPLOITATION_API_KEY
 
                 # --- Interroge l'API avec la clé maître pour récupérer la dénomination en BDD ---
                 donnees_exploit = _valider_cle_client(ADMIN_EXPLOITATION_API_KEY)
                 if donnees_exploit:
-                    session["client_id"] = donnees_exploit.get("client_id", "ID inconnu")
-                    session["nom_structure"] = donnees_exploit.get("nom_structure", donnees_exploit.get("denomination", "Responsable d'Exploitation"))
+                    session["client_id"] = donnees_exploit.get(
+                        "client_id", "ID inconnu"
+                    )
+                    session["nom_structure"] = donnees_exploit.get(
+                        "nom_structure",
+                        donnees_exploit.get(
+                            "denomination", "Responsable d'Exploitation"
+                        ),
+                    )
                 else:
                     session["nom_structure"] = "Responsable d'Exploitation"
                 # -------------

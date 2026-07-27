@@ -11,7 +11,9 @@ Développé pour Python 3.10+ et Scikit-Learn.
 """
 
 import math
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
+from collections.abc import Iterable
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -22,8 +24,8 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 def fill_numeric_with_median(
     X: pd.DataFrame,
-    cols: List[str],
-    stats: Dict[str, Any],
+    cols: list[str],
+    stats: dict[str, Any],
     key: str,
 ) -> pd.DataFrame:
     """Impute les colonnes numériques avec leur médiane (apprise sur train)."""
@@ -40,45 +42,12 @@ def fill_numeric_with_median(
                 X[c] = X[c].fillna(stats[key][c])
     return X
 
-def top_correlated_features(
-    X: pd.DataFrame,
-    y: pd.Series,
-    n: int = 6,
-    numeric_only: bool = True,
-) -> Tuple[pd.Series, List[str]]:
-    """
-    Calcule la corrélation des variables numériques avec une target.
-
-    Parameters
-    ----------
-    X : pd.DataFrame
-        Features d'entrée.
-    y : pd.Series
-        Target associée à X.
-    n : int
-        Nombre de variables les plus corrélées à retourner.
-    numeric_only : bool
-        Applique la corrélation uniquement aux colonnes numériques.
-
-    Returns
-    -------
-    corr_target : pd.Series
-        Corrélation de chaque variable numérique avec la target.
-    top_cols : list
-        Liste des n variables avec corrélation absolue maximale.
-    """
-    num_cols = X.select_dtypes(include=["number"]).columns
-    df_corr = X[num_cols].copy()
-    df_corr["target"] = y
-    corr_target = df_corr.corr(numeric_only=numeric_only)["target"].drop("target")
-    top_cols = (
-        corr_target.abs().sort_values(ascending=False).head(n).index.tolist()
-    )
-    return corr_target, top_cols
 
 # --- Manipulation de Features & Corrélations ---
 
-def select_existing_features(features: Iterable[str], columns: Iterable[str]) -> List[str]:
+def select_existing_features(
+    features: Iterable[str], columns: Iterable[str]
+) -> list[str]:
     """
     Filtre une liste de variables souhaitées pour ne conserver que celles réellement présentes.
 
@@ -105,7 +74,7 @@ def top_correlated_features(
     y: pd.Series,
     n: int = 6,
     numeric_only: bool = True,
-) -> Tuple[pd.Series, List[str]]:
+) -> tuple[pd.Series, list[str]]:
     """
     Calcule la corrélation linéaire de Pearson des variables numériques avec la variable cible (target).
 
@@ -130,19 +99,18 @@ def top_correlated_features(
     df_corr = X[num_cols].copy()
     df_corr["target"] = y
     corr_target = df_corr.corr(numeric_only=numeric_only)["target"].drop("target")
-    top_cols = (
-        corr_target.abs().sort_values(ascending=False).head(n).index.tolist()
-    )
+    top_cols = corr_target.abs().sort_values(ascending=False).head(n).index.tolist()
     return corr_target, top_cols
 
 
 # --- Visualisations Graphiques (EDA) ---
 
+
 def plot_numeric_histograms(
     X: pd.DataFrame,
     bins: int = 40,
     n_cols: int = 3,
-    figsize_per_col: Tuple[int, int] = (5, 3),
+    figsize_per_col: tuple[int, int] = (5, 3),
 ) -> None:
     """
     Génère une grille d'histogrammes pour toutes les variables numériques du DataFrame.
@@ -175,13 +143,12 @@ def plot_numeric_histograms(
     plt.show()
 
 
-
 def plot_qualitative(
     X: pd.DataFrame,
     top_n: int = 20,
     n_cols: int = 2,
-    figsize_per_col: Tuple[int, int] = (6, 4),
-    figsize: Optional[Tuple[int, int]] = None,
+    figsize_per_col: tuple[int, int] = (6, 4),
+    figsize: tuple[int, int]|None = None,
     height_per_row: int = 4,
 ) -> None:
     """
@@ -230,8 +197,8 @@ def plot_qualitative(
 
 def plot_missing_bar(
     X: pd.DataFrame,
-    top_n: Optional[int] = None,
-    figsize: Tuple[int, int] = (8, 4),
+    top_n: int|None = None,
+    figsize: tuple[int, int] = (8, 4),
 ) -> None:
     """
     Affiche un graphique en barres représentant le pourcentage de valeurs manquantes par colonne.
@@ -263,8 +230,8 @@ def plot_scatter_vs_target(
     X: pd.DataFrame,
     y: pd.Series,
     cols: Iterable[str],
-    transform_y: Optional[str] = None,
-    figsize: Tuple[int, int] = (15, 10),
+    transform_y: str|None = None,
+    figsize: tuple[int, int] = (15, 10),
     alpha: float = 0.2,
     s: int = 10,
 ) -> None:
@@ -314,7 +281,7 @@ def plot_corr_heatmap(
     df: pd.DataFrame,
     method: str = "pearson",
     title: str = "Heatmap des corrélations",
-    figsize: Tuple[int, int] = (12, 10),
+    figsize: tuple[int, int] = (12, 10),
     annot: bool = True,
     fmt: str = ".2f",
     vmin: float = -1,
@@ -355,18 +322,19 @@ def plot_corr_heatmap(
 
 # --- Évaluation Multi-Modèles Réutilisable ---
 
+
 def evaluate_regression_model(
     algo: Any,
-    param_grid: Optional[Dict[str, Any]],
+    param_grid: dict[str, Any]|None,
     X_train: pd.DataFrame,
     y_train: pd.Series,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-    search_type: str = 'grid',
-    scoring: str = 'r2',
+    search_type: str = "grid",
+    scoring: str = "r2",
     cv: int = 5,
-    inverse_transform_y: Optional[str] = None
-) -> Dict[str, Any]:
+    inverse_transform_y: str|None = None,
+) -> dict[str, Any]:
     """
     Entraîne, optimise par recherche d'hyperparamètres (optionnel) et évalue un modèle de régression.
 
@@ -415,23 +383,27 @@ def evaluate_regression_model(
         best_params = algo.get_params()
         cv_results = None
     else:
-        if search_type == 'grid':
+        if search_type == "grid":
             search = GridSearchCV(algo, param_grid, cv=cv, scoring=scoring, n_jobs=-1)
-        elif search_type == 'random':
-            search = RandomizedSearchCV(algo, param_grid, cv=cv, scoring=scoring, n_jobs=-1, random_state=42)
+        elif search_type == "random":
+            search = RandomizedSearchCV(
+                algo, param_grid, cv=cv, scoring=scoring, n_jobs=-1, random_state=42
+            )
         else:
             raise ValueError("search_type doit être 'grid' ou 'random'")
-        
+
         search.fit(X_train, y_train)
         best_model = search.best_estimator_
         best_params = search.best_params_
-        cv_results = search.cv_results_  # Correction : .cv_results_ est un attribut, pas une méthode.
+        cv_results = (
+            search.cv_results_
+        )  # Correction : .cv_results_ est un attribut, pas une méthode.
 
     # Prédictions sur le jeu de Test
     y_pred = best_model.predict(X_test)
 
     # Gestion de la transformation inverse pour l'évaluation métier (ex: Target en Log)
-    if inverse_transform_y == 'expm1':
+    if inverse_transform_y == "expm1":
         y_test_eval = np.expm1(y_test)
         y_pred_eval = np.expm1(y_pred)
         unit = " (Unités réelles)"
@@ -458,5 +430,5 @@ def evaluate_regression_model(
         "r2": r2,
         "rmse": rmse,
         "mae": mae,
-        "cv_results": cv_results
+        "cv_results": cv_results,
     }

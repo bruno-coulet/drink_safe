@@ -5,8 +5,10 @@ Description : Validation isolée des schémas de données Pydantic, de la sécur
               des en-têtes (Clés API) et de l'intégrité des règles métiers OMS.
 """
 
-from typing import Any, Dict
+from typing import Any
+
 from fastapi.testclient import TestClient
+
 from src.api import app
 from src.dependencies.auth import get_admin_user
 
@@ -16,19 +18,21 @@ client = TestClient(app)
 # pour autoriser la création de clients de test.
 app.dependency_overrides[get_admin_user] = lambda: "bouchon_admin_test"
 
+
 def test_schema_validation_clients_manquant() -> None:
     """Vérifie que l'API lève une erreur 422 si le corps de la requête clients est incomplet."""
     # Payload invalide : il manque le champ obligatoire 'denomination'
-    payload_incomplet: Dict[str, Any] = {
+    payload_incomplet: dict[str, Any] = {
         "client_id": "TEST_LAB_01",
-        "adresse": "123 Rue de la Pureté, Marseille"
+        "adresse": "123 Rue de la Pureté, Marseille",
     }
     response = client.post("/api/clients", json=payload_incomplet)
     assert response.status_code == 422
 
+
 def test_securite_cle_api_manquante_mesures() -> None:
     """Vérifie le rejet (HTTP 401) du dépôt de mesures si le Header X-API-Key est absent."""
-    payload_mesures: Dict[str, Any] = {
+    payload_mesures: dict[str, Any] = {
         "ph": 7.2,
         "Hardness": 200.0,
         "Solids": 15000.0,
@@ -38,15 +42,16 @@ def test_securite_cle_api_manquante_mesures() -> None:
         "Organic_carbon": 12.0,
         "Trihalomethanes": 50.0,
         "Turbidity": 2.5,
-        "observations": "Test unitaire"
+        "observations": "Test unitaire",
     }
     response = client.post("/api/measurements", json=payload_mesures)
     assert response.status_code == 401
 
+
 def test_garde_fou_oms_ph_acide() -> None:
     """Vérifie que la barrière sanitaire OMS rejette instantanément un pH trop acide."""
     # Un pH de 4.5 est critique et doit déclencher le code 'Non Potable' sans interroger le modèle ML
-    payload_critique: Dict[str, Any] = {
+    payload_critique: dict[str, Any] = {
         "model_choice": "XGBClassifier",
         "ph": 4.5,
         "Hardness": 210.0,
@@ -57,7 +62,7 @@ def test_garde_fou_oms_ph_acide() -> None:
         "Organic_carbon": 10.5,
         "Trihalomethanes": 45.0,
         "Turbidity": 1.2,
-        "observations": "Test barrière OMS pH"
+        "observations": "Test barrière OMS pH",
     }
     # On simule l'appel avec une clé d'administration ou une clé de test pour passer la sécurité
     headers = {"X-API-Key": "test_admin_key"}
@@ -68,11 +73,15 @@ def test_garde_fou_oms_ph_acide() -> None:
     if response.status_code == 200:
         data = response.json()
         assert data["potability"] == 0
-        assert "OMS" in data.get("message", "") or "garde-fou" in data.get("message", "").lower()
+        assert (
+            "OMS" in data.get("message", "")
+            or "garde-fou" in data.get("message", "").lower()
+        )
+
 
 def test_garde_fou_oms_turbidite_elevee() -> None:
     """Vérifie le rejet automatique par l'OMS si la turbidité dépasse le seuil de 5.0 NTU."""
-    payload_trouble: Dict[str, Any] = {
+    payload_trouble: dict[str, Any] = {
         "model_choice": "RandomForestClassifier",
         "ph": 7.4,
         "Hardness": 195.0,
@@ -83,18 +92,22 @@ def test_garde_fou_oms_turbidite_elevee() -> None:
         "Organic_carbon": 13.2,
         "Trihalomethanes": 60.0,
         "Turbidity": 6.8,  # Seuil OMS max fixé à 5.0 NTU
-        "observations": "Test barrière OMS Turbidité"
+        "observations": "Test barrière OMS Turbidité",
     }
     headers = {"X-API-Key": "test_admin_key"}
     response = client.post("/api/predict", json=payload_trouble, headers=headers)
     if response.status_code == 200:
         data = response.json()
         assert data["potability"] == 0
-        assert "OMS" in data.get("message", "") or "turbidité" in data.get("message", "").lower()
+        assert (
+            "OMS" in data.get("message", "")
+            or "turbidité" in data.get("message", "").lower()
+        )
+
 
 def test_garde_fou_oms_chloramines_eleve() -> None:
     """Vérifie le rejet automatique par l'OMS si les Chloramines dépassent 4.0 mg/L."""
-    payload_chloramines: Dict[str, Any] = {
+    payload_chloramines: dict[str, Any] = {
         "model_choice": "WaterModel_LogisticRegression",
         "ph": 7.2,
         "Hardness": 200.0,
@@ -105,7 +118,7 @@ def test_garde_fou_oms_chloramines_eleve() -> None:
         "Organic_carbon": 12.0,
         "Trihalomethanes": 50.0,
         "Turbidity": 2.5,
-        "observations": "Test barrière OMS Chloramines"
+        "observations": "Test barrière OMS Chloramines",
     }
     headers = {"X-API-Key": "test_admin_key"}
     response = client.post("/api/predict", json=payload_chloramines, headers=headers)
@@ -113,9 +126,10 @@ def test_garde_fou_oms_chloramines_eleve() -> None:
         data = response.json()
         assert data["potability"] == 0
 
+
 def test_garde_fou_oms_trihalomethanes_eleve() -> None:
     """Vérifie le rejet automatique par l'OMS si les Trihalométhanes dépassent 80 ppm."""
-    payload_thm: Dict[str, Any] = {
+    payload_thm: dict[str, Any] = {
         "model_choice": "WaterModel_RandomForestClassifier",
         "ph": 7.2,
         "Hardness": 200.0,
@@ -126,7 +140,7 @@ def test_garde_fou_oms_trihalomethanes_eleve() -> None:
         "Organic_carbon": 12.0,
         "Trihalomethanes": 85.0,  # Seuil OMS max fixé à 80 ppm
         "Turbidity": 2.5,
-        "observations": "Test barrière OMS Trihalométhanes"
+        "observations": "Test barrière OMS Trihalométhanes",
     }
     headers = {"X-API-Key": "test_admin_key"}
     response = client.post("/api/predict", json=payload_thm, headers=headers)
