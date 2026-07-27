@@ -225,7 +225,15 @@ def test_isolation_multi_tenant_rgpd() -> None:
     
     # Simule le Client 1 qui dépose ses mesures.
     headers_c1 = {"X-API-Key": key_client_1}
-    response_c1 = client.post("/api/predict/all", json=payload_mesures, headers=headers_c1)
+
+    # mocke le lazy loading pour empêcher l'API de chercher le vrai MLflow dans GitHub Actions
+    with mock.patch("src.routes.predictions._charger_modele") as mock_charger_modele:
+        faux_modele = mock.MagicMock()
+        faux_modele.predict.return_value = [3]
+        mock_charger_modele.return_value = (faux_modele, "v_mock")
+
+        response_c1 = client.post("/api/predict/all", json=payload_mesures, headers=headers_c1)
+
     assert response_c1.status_code in (200, 201)
 
     # 3. Pour le test, simule l'interrogation par le Client 2.
