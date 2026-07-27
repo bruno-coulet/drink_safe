@@ -3,33 +3,47 @@ config:
   theme: dark
 ---
 graph LR
-    subgraph Frontend Flask : Port 5001
-        Exploitation[Responsable d'exploitation<br/>Mot de passe]
-        Analystes[Analyste Qualité<br/>Mot de passe]
-        Client[Client / Agent de terrain<br/>Clé API]
+    %% Définition des classes avec polices agrandies
+    classDef front fill:#50a65e,stroke:#fff,stroke-width:1px,color:#fff,font-size:15px;
+    classDef conteneur fill:#0294e1,stroke:#fff,stroke-width:1px,color:#fff,font-size:15px;
+    classDef volume fill:#76b7d9,stroke:#fff,stroke-width:1px,color:#000,font-size:14px;
+    classDef externe fill:#f2b7fb,stroke:#fff,stroke-width:1px,color:#000,font-size:15px;
+
+    subgraph FRONT ["<span style='font-size:16px; font-weight:bold;'>Frontend Flask : Port 5001</span>"]
+        Exploitation[Responsable d'exploitation<br/>Mot de passe]:::front
+        Analystes[Analyste Qualité<br/>Mot de passe]:::front
+        Client[Client / Agent de terrain<br/>Clé API]:::front
     end
-    subgraph Conteneur Docker : Backend
-        API{API Unique Modulaire<br/>FastAPI : 8000}
-        R_Data[ /data ]
-        R_Predict[ /predict ]
-        R_OCR[ /ocr ]
-        
+
+    subgraph BACK ["<span style='font-size:16px; font-weight:bold;'>Conteneur Docker : Backend</span>"]
+        API{<b>API Unique Modulaire</b><br/>FastAPI : 8000}:::conteneur
+        R_Data[ /data ]:::conteneur
+        R_Predict[ /predict ]:::conteneur
+        R_OCR[ /ocr ]:::conteneur
+
         API --- R_Data
         API --- R_Predict
         API --- R_OCR
     end
-    subgraph Conteneurs & Volumes
-        MLflow[Serveur MLflow : 5000]
-        DB[(PostgreSQL 16 : 5432<br/>Données + Métadonnées)]
-        Vol_ML[\Volume Partagé<br/>Artefacts .pkl/]
+
+    subgraph DATA ["<span style='font-size:16px; font-weight:bold;'>Couche Tracking & Données</span>"]
+        MLflow[Conteneur MLflow : 5000]:::conteneur
+        Vol_ML[\Volume Partagé local<br/>Artifact Store .pkl/]:::volume
+
+        DB_Cont[Conteneur PostgreSQL 16 : 5432]:::conteneur
+        DB_Vol[(Volume Persistant<br/>Backend Store)]:::volume
+
+        MLflow -- Indexation --> DB_Cont
+        MLflow -- Sauvegarde --> Vol_ML
+        DB_Cont -. Persistance .-> DB_Vol
     end
-    OCR[Service Externe<br/>OCR.space]
+
+    OCR[Service Externe<br/>OCR.space]:::externe
+
     Exploitation -- HTTP / localhost --> API
     Analystes -- HTTP / localhost --> API
     Client -- HTTP / localhost --> API
-    R_Data --> DB
+
+    R_Data --> DB_Cont
     API -. Lazy Loading .-> Vol_ML
     R_OCR -. Fichier image/PDF .-> OCR
-    
-    MLflow -- Indexation --> DB
-    MLflow -- Sauvegarde Modèles --> Vol_ML

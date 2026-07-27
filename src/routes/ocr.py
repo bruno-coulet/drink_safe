@@ -126,7 +126,7 @@ async def ingerer_fiche_laboratoire(
         # FALLBACK GRACIEUX (Message honnête et unique)
         return {
             "status": "pending",
-            "message": "Le service d'analyse documentaire est temporairement indisponible. Veuillez soumettre votre prélèvement manuellement ou réessayer plus tard."
+            "message": "Le service d'OCR est temporairement indisponible. Veuillez réessayer plus tard."
         }
 
 

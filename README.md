@@ -64,7 +64,7 @@ Il faut minimiser les "faux positifs" *cm_fp : confusion matrix false positive*
 
 L'application est segmentée en couches isolées (présentation, logicielle/inférence, données) communiquant par HTTP. La couche données sépare le stockage des métadonnées MLflow (PostgreSQL) de celui des artefacts binaires (volume partagé).
 
-![Architecture Waterflow 2](img/archi_drink_safe.png)
+![Architecture drink_safe](img/archi_drink_safe.png)
 
 ### Stack Technique Fixe
 
@@ -418,12 +418,14 @@ L'IHM expose trois volets :
 - Si le service OCR ne reconnaît pas une mesure, une valeur par défaut est appliquée.
 - En cas d'indisponibilité ou de quota OCR.space atteint
   (`IsErroredOnProcessing`, timeout)
-  l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.
+  l'API renvoie un statut `pending` (HTTP 201) sans crasher — l'incident est tracé dans les logs et incrémente le compteur Prometheus `ocr_failures_total`.<br>
+  Ce compteur est supervisé par un graphique dédié dans le [dashboard Grafana](http://localhost:3000/d/adpf7x7/drink-safe)
 
 
 **Rôles experts simplifiés** :
 
-l'énoncé autorise une authentification expert légère ; ici tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
+L'énoncé autorise une authentification expert légère<br>
+Tout appelant authentifié peut atteindre `GET /measurements/admin`. Un contrôle de rôle dédié reste à ajouter.
 
 
 

@@ -106,3 +106,12 @@ Le Contraste (RGAA / WCAG) :
 modification de la couleur des textes .text-muted (d'un gris illisible vers un bleu très foncé) pour les adapter au nouveau fond clair (le ratio de contraste).
 
 De plus, j'ai utilisé des balises sémantiques HTML (h2, th pour les tableaux) pour structurer l'information.
+
+---
+
+### Amélioration technique : Refactorisation DRY du Fallback OCR
+*   **Symptôme :** Forte duplication de code dans la gestion des pannes de la route `/api/ocr/lab-report`. L'écriture des logs structurés JSON et l'incrémentation du compteur Prometheus (`OCR_FAILURES.inc()`) étaient copiées-collées à l'identique dans plusieurs blocs d'exceptions, ce qui violait le principe DRY (*Don't Repeat Yourself*) et rendait la maintenance difficile.
+*   **Causes racines :** L'implémentation initiale du fallback gracieux séparait le traitement des erreurs réseau (`requests.RequestException`) des erreurs génériques (`Exception`), obligeant à dupliquer la logique de supervision applicative. De plus, le code prévoyait de renvoyer des messages différents suggérant un "traitement asynchrone" qui n'est pas encore implémenté dans l'architecture actuelle.
+*   **Résolutions appliquées :**
+    *   **Centralisation (DRY) :** Fusion des blocs de capture en un unique `except Exception as e:`. La création de la métrique d'alerte et la journalisation d'audit ne sont désormais exécutées qu'à un seul endroit dans le code.
+    *   **Transparence utilisateur :** Remplacement des anciens messages par un message de *fallback* unique et honnête ("*Le service d'analyse documentaire est temporairement indisponible...*"), ce qui a permis de simplifier la logique de retour de l'API tout en gardant la protection anti-crash intacte.

@@ -18,6 +18,7 @@ wheels/
 # Données et fichiers temporaires
 data/*
 temp/*
+legacy/*
 
 .vscode/settings.json
 
