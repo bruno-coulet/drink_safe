@@ -10,7 +10,7 @@ Description : Interface de supervision métier — consultation globale des
 """
 
 import os
-from abc import Callable
+from collections.abc import Callable
 from functools import wraps
 from typing import Any
 

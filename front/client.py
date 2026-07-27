@@ -10,7 +10,7 @@ Description : Interface du client final — soumettre un prélèvement par
 
 import csv
 import os
-from abc import Callable
+from collections.abc import Callable
 from functools import wraps
 from io import StringIO
 from typing import Any
