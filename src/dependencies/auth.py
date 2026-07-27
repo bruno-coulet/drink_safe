@@ -10,9 +10,10 @@ Description : Intercepteur et validateur de clés API stockées en base de donn�
 """
 
 import hashlib
-from fastapi import Security, HTTPException, status, Request
-from fastapi.security.api_key import APIKeyHeader
+
 import psycopg2
+from fastapi import HTTPException, Request, Security, status
+from fastapi.security.api_key import APIKeyHeader
 
 from src.config import settings
 
@@ -35,33 +36,33 @@ def hacher_cle(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()
 
 
-def get_current_client(request: Request, api_key: str = Security(api_key_header)) -> str:
+def get_current_client(
+    request: Request, api_key: str = Security(api_key_header)
+) -> str:
     """Valide la clé API fournie et retourne l'identifiant du client associé."""
 
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Clé d'authentification manquante dans le Header."
+            detail="Clé d'authentification manquante dans le Header.",
         )
 
     # 1. Hachage de la clé reçue
     cle_hachee = hacher_cle(api_key)
 
     try:
-        with psycopg2.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cursor:
-                # 2. On EXÉCUTE la requête avec la clé hachée
-                cursor.execute(
-                    "SELECT client_id FROM clients WHERE api_key = %s;",
-                    (cle_hachee,)
-                )
-                result = cursor.fetchone()
+        with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+            # 2. On EXÉCUTE la requête avec la clé hachée
+            cursor.execute(
+                "SELECT client_id FROM clients WHERE api_key = %s;", (cle_hachee,)
+            )
+            result = cursor.fetchone()
 
-         # 3. Si on ne trouve rien (clé invalide ou révoquée)
+        # 3. Si on ne trouve rien (clé invalide ou révoquée)
         if result is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Clé API invalide ou révoquée."
+                detail="Clé API invalide ou révoquée.",
             )
 
         # 4. On extrait l'ID PROPREMENT en ciblant l'index  du tuple
@@ -72,10 +73,10 @@ def get_current_client(request: Request, api_key: str = Security(api_key_header)
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur interne lors de la vérification des droits : {str(e)}"
+            detail=f"Erreur interne lors de la vérification des droits : {e}",
         )
 
 
@@ -91,44 +92,42 @@ def get_admin_user(api_key: str = Security(api_key_header)) -> str:
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Clé API manquante dans l'en-tête."
+            detail="Clé API manquante dans l'en-tête.",
         )
     # On hache la clé reçue pour la comparer avec la BDD
     cle_hachee = hacher_cle(api_key)
 
     try:
-        with psycopg2.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cursor:
-                # On récupère l'ID et surtout le RÔLE !
-                cursor.execute(
-                    "SELECT client_id, role FROM clients WHERE api_key = %s;",
-                    (cle_hachee,)
+        with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+            # On récupère l'ID et surtout le RÔLE !
+            cursor.execute(
+                "SELECT client_id, role FROM clients WHERE api_key = %s;",
+                (cle_hachee,),
+            )
+            user = cursor.fetchone()
+
+            # 1. Si la clé n'existe pas
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Clé API invalide ou compte supprimé.",
                 )
-                user = cursor.fetchone()
 
-                # 1. Si la clé n'existe pas
-                if not user:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Clé API invalide ou compte supprimé."
-                    )
+            client_id, role = user
 
-                client_id, role = user
+            # 2. Si la clé est valide, mais que le rôle n'est pas admin (matrice des droits)
+            if role not in ["analyste", "exploitation"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Privilèges insuffisants. Cette action est réservée aux administrateurs.",
+                )
 
-                # 2. Si la clé est valide, mais que le rôle n'est pas admin (matrice des droits)
-                if role not in ["analyste", "exploitation"]:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Privilèges insuffisants. Cette action est réservée aux administrateurs."
-                    )
-
-                return client_id
+            return client_id
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur d'authentification : {str(e)}"
+            detail=f"Erreur d'authentification : {e}",
         )
-

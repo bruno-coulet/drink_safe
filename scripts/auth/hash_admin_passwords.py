@@ -20,6 +20,7 @@ Usage :
 """
 
 import getpass
+
 from werkzeug.security import generate_password_hash
 
 
@@ -36,7 +37,7 @@ def main() -> None:
 
         hash_bcrypt = generate_password_hash(mdp)
         var = f"ADMIN_{role.upper()}_PASSWORD_HASH"
-        print(f"\nAjouter dans .env :")
+        print("\nAjouter dans .env :")
         print(f"{var}={hash_bcrypt}\n")
 
 

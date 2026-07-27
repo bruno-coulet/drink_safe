@@ -9,8 +9,9 @@ Description : Gestion dynamique des configurations selon le contexte d'exécutio
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+
 import psycopg2
+from dotenv import load_dotenv
 
 ROOT_DIR: Path = Path(__file__).resolve().parents[1]
 
@@ -47,18 +48,20 @@ class Settings:
     DB_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "MonMotDePasseSecurise123!")
     DB_NAME: str = "waterflow_db"
 
-
-
     # Assemblage propre et sécurisé de la chaîne de connexion
     # DATABASE_URL: str = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
     # nettoyer chaque composant individuellement
     DATABASE_URL: str = f"postgresql://{DB_USER.strip()}:{DB_PASSWORD.strip()}@{DB_HOST.strip()}:5432/{DB_NAME.strip()}"
 
     # --- Configuration Dynamique MLflow ---
-    MLFLOW_TRACKING_URI: str = "http://mlflow:5000" if IS_DOCKER else "http://127.0.0.1:5000"
+    MLFLOW_TRACKING_URI: str = (
+        "http://mlflow:5000" if IS_DOCKER else "http://127.0.0.1:5000"
+    )
+
 
 # Instanciation unique (Pattern Singleton)
 settings = Settings()
+
 
 def init_db() -> None:
     """Crée les tables SQL requises si elles n'existent pas encore en BDD."""
@@ -105,14 +108,13 @@ def init_db() -> None:
             execution_duration_ms INT,
             execute_le TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        """
+        """,
     ]
 
     try:
         # Ouvre la connexion et le curseur
         with psycopg2.connect(settings.DATABASE_URL) as conn:
             with conn.cursor() as cursor:
-
                 # COMMANDES PYTHON DE NETTOYAGE EN CAS DE BESOIN
                 # cursor.execute("DROP TABLE IF EXISTS action_logs CASCADE;")
                 # cursor.execute("DROP TABLE IF EXISTS prelevements CASCADE;")

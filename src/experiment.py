@@ -11,37 +11,43 @@ Description : Chargement des datasets, entraînement du catalogue de modèles,
 -------------------------------------------------------------------------------
 """
 
-
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
+
+import mlflow
+import mlflow.sklearn
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
+import requests
 from sklearn.metrics import (
-    accuracy_score, f1_score, precision_score, recall_score,
-    roc_auc_score, average_precision_score, confusion_matrix,
+    accuracy_score,
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
 )
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.utils.class_weight import compute_sample_weight
-import mlflow
-import mlflow.sklearn
-from pathlib import Path
+
 from src.config import PATH_WATER_IMPUTED, PATH_WATER_STD
 
-
-import mlflow
-
-import requests
 _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
+
+
 def patched_prepare_headers(self, headers):
     _old_prepare_headers(self, headers)
     self.headers["Host"] = "localhost:5000"
+
+
 requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 
-from src.config import settings, init_db
+from src.config import init_db, settings
 from src.models import get_models
-
 
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 # mlflow.set_experiment("Water_Potability_Evaluation_v2")
@@ -98,16 +104,25 @@ def _scores_cv(
         y_fold_train, y_fold_val = y.iloc[train_idx], y.iloc[val_idx]
 
         modele.fit(X_fold_train, y_fold_train, **_fit_kwargs(modele, y_fold_train))
-        y_pred  = modele.predict(X_fold_val)
+        y_pred = modele.predict(X_fold_val)
         y_proba = (
             modele.predict_proba(X_fold_val)[:, 1]
-            if hasattr(modele, "predict_proba") else None
+            if hasattr(modele, "predict_proba")
+            else None
         )
 
         scores["accuracy"].append(float(accuracy_score(y_fold_val, y_pred)))
-        scores["f1"].append(float(f1_score(y_fold_val, y_pred, average="binary", zero_division=0)))
-        scores["precision"].append(float(precision_score(y_fold_val, y_pred, average="binary", zero_division=0)))
-        scores["recall"].append(float(recall_score(y_fold_val, y_pred, average="binary", zero_division=0)))
+        scores["f1"].append(
+            float(f1_score(y_fold_val, y_pred, average="binary", zero_division=0))
+        )
+        scores["precision"].append(
+            float(
+                precision_score(y_fold_val, y_pred, average="binary", zero_division=0)
+            )
+        )
+        scores["recall"].append(
+            float(recall_score(y_fold_val, y_pred, average="binary", zero_division=0))
+        )
         if y_proba is not None:
             scores["roc_auc"].append(float(roc_auc_score(y_fold_val, y_proba)))
             scores["pr_auc"].append(float(average_precision_score(y_fold_val, y_proba)))
@@ -128,11 +143,19 @@ def executer_pipeline_mlops() -> None:
     df_std = pd.read_csv(PATH_WATER_STD)
 
     X_train_imp, X_test_imp, y_train_imp, y_test_imp = train_test_split(
-        df_imputed.drop(columns=["Potability"], errors="ignore"), df_imputed["Potability"], test_size=0.2, random_state=42, stratify=df_imputed["Potability"]
+        df_imputed.drop(columns=["Potability"], errors="ignore"),
+        df_imputed["Potability"],
+        test_size=0.2,
+        random_state=42,
+        stratify=df_imputed["Potability"],
     )
 
     X_train_std, X_test_std, y_train_std, y_test_std = train_test_split(
-        df_std.drop(columns=["Potability"], errors="ignore"), df_std["Potability"], test_size=0.2, random_state=42, stratify=df_std["Potability"]
+        df_std.drop(columns=["Potability"], errors="ignore"),
+        df_std["Potability"],
+        test_size=0.2,
+        random_state=42,
+        stratify=df_std["Potability"],
     )
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -143,12 +166,21 @@ def executer_pipeline_mlops() -> None:
 
         # 2. SELECTION DYNAMIQUE DU DATASET SELON LE MODELE
         if "LogisticRegression" in nom_modele or "MLP" in nom_modele:
-            X_train, X_test, y_train, y_test = X_train_std, X_test_std, y_train_std, y_test_std
+            X_train, X_test, y_train, y_test = (
+                X_train_std,
+                X_test_std,
+                y_train_std,
+                y_test_std,
+            )
             file_name = Path("data/processed/water_std.csv").name
-        else: # RandomForest, XGBoost...
-            X_train, X_test, y_train, y_test = X_train_imp, X_test_imp, y_train_imp, y_test_imp
+        else:  # RandomForest, XGBoost...
+            X_train, X_test, y_train, y_test = (
+                X_train_imp,
+                X_test_imp,
+                y_train_imp,
+                y_test_imp,
+            )
             file_name = Path("data/processed/water_imputed.csv").name
-
 
         # (Optionnel) Affiche la stratification
         print(
@@ -159,7 +191,6 @@ def executer_pipeline_mlops() -> None:
 
         # 3. Bloc d'exécution mlflow
         with mlflow.start_run(run_name=nom_modele):
-
             mlflow.log_param("architecture", nom_modele)
             mlflow.log_param("n_train", len(y_train))
             mlflow.log_param("n_test", len(y_test))
@@ -171,53 +202,105 @@ def executer_pipeline_mlops() -> None:
             print(f"  CV 5 folds...")
             scores_cv = _scores_cv(model_instance, X_train, y_train, cv)
             for metrique, valeurs in scores_cv.items():
-                mlflow.log_metric(f"cv_mean_{metrique}", round(float(np.mean(valeurs)), 4))
-                mlflow.log_metric(f"cv_std_{metrique}", round(float(np.std(valeurs)), 4))
+                mlflow.log_metric(
+                    f"cv_mean_{metrique}", round(float(np.mean(valeurs)), 4)
+                )
+                mlflow.log_metric(
+                    f"cv_std_{metrique}", round(float(np.std(valeurs)), 4)
+                )
 
             # --- Entraînement final sur l'ensemble du train ---
             print(f"  Entrainement final...")
             model_instance.fit(X_train, y_train, **_fit_kwargs(model_instance, y_train))
 
-            y_pred_test  = model_instance.predict(X_test)
+            y_pred_test = model_instance.predict(X_test)
             y_pred_train = model_instance.predict(X_train)
             y_proba_test = (
                 model_instance.predict_proba(X_test)[:, 1]
-                if hasattr(model_instance, "predict_proba") else None
+                if hasattr(model_instance, "predict_proba")
+                else None
             )
 
             # --- Métriques test (généralisation) ---
             metriques_test: dict[str, float] = {
-                "test_accuracy":  round(float(accuracy_score(y_test, y_pred_test)), 4),
-                "test_f1":        round(float(f1_score(y_test, y_pred_test, average="binary", zero_division=0)), 4),
-                "test_precision": round(float(precision_score(y_test, y_pred_test, average="binary", zero_division=0)), 4),
-                "test_recall":    round(float(recall_score(y_test, y_pred_test, average="binary", zero_division=0)), 4),
+                "test_accuracy": round(float(accuracy_score(y_test, y_pred_test)), 4),
+                "test_f1": round(
+                    float(
+                        f1_score(y_test, y_pred_test, average="binary", zero_division=0)
+                    ),
+                    4,
+                ),
+                "test_precision": round(
+                    float(
+                        precision_score(
+                            y_test, y_pred_test, average="binary", zero_division=0
+                        )
+                    ),
+                    4,
+                ),
+                "test_recall": round(
+                    float(
+                        recall_score(
+                            y_test, y_pred_test, average="binary", zero_division=0
+                        )
+                    ),
+                    4,
+                ),
             }
             if y_proba_test is not None:
-                metriques_test["test_roc_auc"] = round(float(roc_auc_score(y_test, y_proba_test)), 4)
-                metriques_test["test_pr_auc"]  = round(float(average_precision_score(y_test, y_proba_test)), 4)
+                metriques_test["test_roc_auc"] = round(
+                    float(roc_auc_score(y_test, y_proba_test)), 4
+                )
+                metriques_test["test_pr_auc"] = round(
+                    float(average_precision_score(y_test, y_proba_test)), 4
+                )
             mlflow.log_metrics(metriques_test)
 
             # --- Métriques train (détection de surapprentissage) ---
-            mlflow.log_metrics({
-                "train_accuracy": round(float(accuracy_score(y_train, y_pred_train)), 4),
-                "train_f1":       round(float(f1_score(y_train, y_pred_train, average="binary", zero_division=0)), 4),
-            })
+            mlflow.log_metrics(
+                {
+                    "train_accuracy": round(
+                        float(accuracy_score(y_train, y_pred_train)), 4
+                    ),
+                    "train_f1": round(
+                        float(
+                            f1_score(
+                                y_train, y_pred_train, average="binary", zero_division=0
+                            )
+                        ),
+                        4,
+                    ),
+                }
+            )
 
             # --- Matrice de confusion (test set) ---
             tn, fp, fn, tp = confusion_matrix(y_test, y_pred_test).ravel()
-            mlflow.log_metrics({
-                "vrais_negatifs": int(tn),  # non-potable correct
-                "faux_positifs":  int(fp),  # non-potable déclaré potable (risque sanitaire)
-                "faux_negatifs":  int(fn),  # potable déclaré non-potable (gaspillage)
-                "vrais_positifs": int(tp),  # potable correct
-                "test_recall_non_potable": round(float(recall_score(y_test, y_pred_test, pos_label=0, zero_division=0)), 4),
-            })
+            mlflow.log_metrics(
+                {
+                    "vrais_negatifs": int(tn),  # non-potable correct
+                    "faux_positifs": int(
+                        fp
+                    ),  # non-potable déclaré potable (risque sanitaire)
+                    "faux_negatifs": int(
+                        fn
+                    ),  # potable déclaré non-potable (gaspillage)
+                    "vrais_positifs": int(tp),  # potable correct
+                    "test_recall_non_potable": round(
+                        float(
+                            recall_score(
+                                y_test, y_pred_test, pos_label=0, zero_division=0
+                            )
+                        ),
+                        4,
+                    ),
+                }
+            )
 
             nom_registre = f"{nom_modele}"
             mlflow.sklearn.log_model(
                 sk_model=model_instance,
                 artifact_path="model",
-                registered_model_name=nom_registre
+                registered_model_name=nom_registre,
             )
             print(f"[MLOps] OK — {nom_registre} enregistre dans le Model Registry.")
 

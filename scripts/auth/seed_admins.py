@@ -20,12 +20,13 @@ import os
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
 import psycopg2
+from dotenv import load_dotenv
 
 
 def _hacher_cle(cle: str) -> str:
     return hashlib.sha256(cle.encode()).hexdigest()
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BASE_DIR / ".env")

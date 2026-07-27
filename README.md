@@ -19,14 +19,14 @@ Ce projet est réalisé dans le cadre d'un [bachelor en développement en intell
 Il implémente :
 - un pipeline complet de Machine Learning destiné à prédire la potabilité de l'eau à partir de caractéristiques physico-chimiques.
 - une architecture industrielle multi-niveau hautement découplée et conteneurisée via **Docker Compose** visant à automatiser :
-- l'analyse
-- le suivi
-- l'ingestion OCR
-- la prédiction.
+  - l'analyse
+  - le suivi
+  - l'ingestion OCR
+  - la prédiction.
 
 Réalisé sous l'environnement WSL2, le système intègre :
 - une interface utilisateur réactive (Flask).
-- une **API Unique unifiée (FastAPI)** gérant :
+- une **API Unique modulaire** (FastAPI) gérant :
     - l'ingestion des données (Data)
     - l'extraction documentaire (OCR)
     - les prédictions (Model) protégées par des garde-fous sanitaires.
@@ -45,14 +45,13 @@ Le jeu de donnée n'est pas stocké dans le dépôt Git.
 Il doit être [téléchargé directement](https://drive.google.com/file/d/1C-tYJcgJDx5AuF7_oz7U4bbY0PERiFLo/view), ainsi que son [descriptif](https://drive.google.com/file/d/1VSRPKK6ys0Kn3gSYDHgrQogdBAHXcEKg/view).
 
 ### Cible et métrique approprié
-L'objectif est de prédire quand l'eau est **non potable**.
+L'objectif est de prédire quand l'eau est **non potable**.<br>
+La cible est la **valeur 0** de l'étiquette binaire potable/non potable
 
-La cible est la valeur 0 de l'étiquette binaire potable/non potable
-
-Par défaut, `sklearn` calcule le **recall** sur la *classe positive (1 = Potable)*
+Par défaut, `sklearn` calcule le **recall** sur la *classe positive (1 = Potable)*<br>
 Ce n'est pas adapté à notre objectif
 
-Il faut minimiser les "faux positifs" *cm_fp : confusion matrix false positive*
+Il faut minimiser les "faux positifs" *cm_fp*<br>(confusion matrix false positive)
 
 **Métrique métier prioritaire :** recall sur la *classe 0 = non-potable*
 
@@ -82,7 +81,7 @@ Les données sont segmentées et partagées avec les conteneurs dans le réperto
 |-|-|
 | `data/raw/water_potability.csv` | Jeu de données brut d'origine|
 | `data/processed/water_imputed.csv` | Données imputées par la médiane — base d'entraînement des 4 modèles|
-| `data/processed/water_std.csv` | Version standardisée [EDA](notebooks/eda.ipynb). En production, la standardisation requise par la Régression Logistique et le MLP est **intégrée à leur `Pipeline` scikit-learn**, donc appliquée à l'identique à l'entraînement et à l'inférence.|
+| `data/processed/water_std.csv` | Version standardisée [EDA](notebooks/eda.ipynb).<br>La standardisation requise par la Régression Logistique et le MLP<br>**Intégrée à leur `Pipeline` scikit-learn**<br>(appliquée à l'identique à l'entraînement et à l'inférence)|
 
 ### Architecture de la Stack Réseau
 L'infrastructure applicative est segmentée en services isolés communiquant par requêtes HTTP :
@@ -156,15 +155,15 @@ Procédure pour démarrer l'application complète en s'appuyant sur l'infrastruc
 
 ### 4.1 Pré-requis et Configuration de l'Authentification
 
-Pour démarrer l'application, il faut configurer la sécurité à double niveau entre l'interface utilisateur (Frontend) et l'API(Backend).
+Pour démarrer l'application, il faut configurer la sécurité à double niveau entre l'interface utilisateur et l'API.
 
-*   **Le Frontend (Flask)**.
-Authentifie les humains via un mot de passe classique.
+*   **Le Frontend (Flask)**<br>
+Authentifie les humains via un mot de passe classique.<br>
+L'application s'attend à lire une empreinte hachée (`scrypt`) dans le fichier `.env`
 
-Par sécurité, l'application s'attend à lire une empreinte hachée (`scrypt`) dans le fichier `.env`.
-
-*   **Le Backend (FastAPI)**.
-N'accepte que des **Clés API** (pour la communication de machine à machine).
+*   **Le Backend (FastAPI)**<br>
+N'accepte que des **Clés API**<br>
+pour la communication de machine à machine
 
 
 #### A) Fichier d'environnement
@@ -172,13 +171,15 @@ N'accepte que des **Clés API** (pour la communication de machine à machine).
 - le renommer `.env`
 
 #### B) Démarrer l'infrastructure et l'API
-Démarrer **Docker Desktop**
+Démarrer **Docker Desktop**<br>
 L' intégration WSL2 doit être activée : settings/ressources/wsl integration
 
 **Déployement des containers de l'environnement**
-- postgres  ----Base de données
-- mlflow  ------serveur MLflow
-- api  ----------serveur API Unique
+- postgres  ----- Base de données
+- mlflow  -------- serveur MLflow
+- api  ----------- serveur API Unique
+- prometheus -- collecte et stockage des métriques temporelles /metrics
+- grafana ------- Tableaux de bord de supervision (Monitoring RED)
 
 via la commande :
 ```bash

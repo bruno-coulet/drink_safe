@@ -8,15 +8,24 @@ Description : Interface du client final — soumettre un prélèvement par
 -------------------------------------------------------------------------------
 """
 
-import os
-import requests
-from functools import wraps
-from typing import Any, Callable, Dict, Optional
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for, Response
 import csv
+import os
+from abc import Callable
+from functools import wraps
 from io import StringIO
+from typing import Any
 
-
+import requests
+from flask import (
+    Blueprint,
+    Response,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 client_bp = Blueprint("client", __name__, template_folder="templates")
 
@@ -25,15 +34,21 @@ API_BASE_URL: str = os.getenv("API_URL", "http://localhost:8000/api")
 
 def role_requis(role: str) -> Callable:
     """Décorateur qui restreint l'accès à un rôle de session spécifique."""
+
     def decorateur(f: Callable) -> Callable:
         @wraps(f)
         def wrapper(*args, **kwargs) -> Any:
             if session.get("role") != role:
-                flash("Accès non autorisé. Connectez-vous avec le bon profil.", "danger")
+                flash(
+                    "Accès non autorisé. Connectez-vous avec le bon profil.", "danger"
+                )
                 return redirect(url_for("auth.login"))
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorateur
+
 
 @client_bp.route("/")
 @role_requis("client")
@@ -46,20 +61,18 @@ def dashboard():
     # 2. Récupération des informations depuis la session Flask
     donnees_client = {
         "client_id": session.get("client_id", "ID inconnu"),
-        "nom_structure": session.get("nom_structure", "Client")
+        "nom_structure": session.get("nom_structure", "Client"),
     }
 
     # 3. Transmission de l'objet 'client' au fichier HTML
-    return render_template(
-        "client/dashboard.html",
-        client=donnees_client
-    )
+    return render_template("client/dashboard.html", client=donnees_client)
+
 
 @client_bp.route("/predict", methods=["POST"])
 @role_requis("client")
 def predict():
     """Soumet un prélèvement manuel aux 4 modèles et affiche le consensus."""
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "ph": float(request.form.get("ph", 7.0)),
         "Hardness": float(request.form.get("hardness", 200.0)),
         "Solids": float(request.form.get("solids", 20000.0)),
@@ -72,8 +85,8 @@ def predict():
         "observations": "Soumission manuelle depuis le portail Flask",
     }
     headers = {"X-API-Key": session["api_key"]}
-    resultat: Optional[Dict] = None
-    erreur: Optional[str] = None
+    resultat: dict | None = None
+    erreur: str | None = None
 
     try:
         resp = requests.post(
@@ -93,6 +106,7 @@ def predict():
         form_values=request.form,
     )
 
+
 @client_bp.route("/ocr", methods=["POST"])
 @role_requis("client")
 def ocr():
@@ -103,9 +117,9 @@ def ocr():
         return redirect(url_for("client.dashboard"))
 
     headers = {"X-API-Key": session["api_key"]}
-    resultat_ocr: Optional[Dict] = None
-    resultat_pred: Optional[Dict] = None
-    erreur: Optional[str] = None
+    resultat_ocr: dict | None = None
+    resultat_pred: dict | None = None
+    erreur: str | None = None
 
     try:
         resp_ocr = requests.post(
@@ -139,7 +153,6 @@ def ocr():
             if resp_pred.status_code == 200:
                 resultat_pred = resp_pred.json()
 
-
         else:
             erreur = f"Échec OCR ({resp_ocr.status_code}) : {resp_ocr.text}"
     except requests.RequestException as e:
@@ -151,7 +164,6 @@ def ocr():
         resultat_pred=resultat_pred,
         erreur=erreur,
     )
-
 
 
 @client_bp.route("/export-rgpd")
@@ -183,11 +195,11 @@ def export_data():
 
         # crée la réponse et la retourne
         output = Response(si.getvalue(), mimetype="text/csv")
-        output.headers["Content-Disposition"] = "attachment; filename=mes_donnees_waterflow.csv"
+        output.headers["Content-Disposition"] = (
+            "attachment; filename=mes_donnees_waterflow.csv"
+        )
         return output
 
     else:
         flash("Erreur lors de la récupération de vos données.", "danger")
         return redirect(url_for("client.dashboard"))
-
-

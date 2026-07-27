@@ -10,8 +10,10 @@ Description : Interface de supervision métier — consultation globale des
 """
 
 import os
-from typing import Any, Callable, Dict, List, Optional
+from abc import Callable
 from functools import wraps
+from typing import Any
+
 import requests
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -22,6 +24,7 @@ API_BASE_URL: str = os.getenv("API_URL", "http://localhost:8000/api")
 
 def role_requis(role: str) -> Callable:
     """Décorateur qui restreint l'accès à un rôle de session spécifique."""
+
     def decorateur(f: Callable) -> Callable:
         @wraps(f)
         def wrapper(*args, **kwargs) -> Any:
@@ -29,18 +32,20 @@ def role_requis(role: str) -> Callable:
                 flash("Accès réservé aux Analystes Qualité.", "danger")
                 return redirect(url_for("auth.login"))
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorateur
 
 
 def _filtrer(
-    donnees: List[Dict],
+    donnees: list[dict],
     client_id: str,
     provenance: str,
     resultat: str,
     date_debut: str,
     date_fin: str,
-) -> List[Dict]:
+) -> list[dict]:
     """Applique les filtres multicritères sur la liste des prélèvements."""
     filtrees = donnees
 
@@ -61,7 +66,9 @@ def _filtrer(
     if date_debut:
         filtrees = [d for d in filtrees if d.get("cree_le", "") >= date_debut]
     if date_fin:
-        filtrees = [d for d in filtrees if d.get("cree_le", "") <= date_fin + "T23:59:59"]
+        filtrees = [
+            d for d in filtrees if d.get("cree_le", "") <= date_fin + "T23:59:59"
+        ]
 
     return filtrees
 
@@ -71,8 +78,8 @@ def _filtrer(
 def dashboard():
     """Charge tous les prélèvements et applique les filtres de la requête."""
     headers = {"X-API-Key": session["api_key"]}
-    donnees: List[Dict] = []
-    erreur: Optional[str] = None
+    donnees: list[dict] = []
+    erreur: str | None = None
 
     try:
         resp = requests.get(
@@ -86,8 +93,12 @@ def dashboard():
         erreur = f"Impossible de joindre l'API : {e}"
 
     # Extraction des valeurs distinctes pour les menus de filtres
-    clients_ids = sorted({d.get("client_id", "") for d in donnees if d.get("client_id")})
-    provenances = sorted({d.get("provenance", "") for d in donnees if d.get("provenance")})
+    clients_ids = sorted(
+        {d.get("client_id", "") for d in donnees if d.get("client_id")}
+    )
+    provenances = sorted(
+        {d.get("provenance", "") for d in donnees if d.get("provenance")}
+    )
 
     # Récupération des filtres depuis la requête GET
     f_client = request.args.get("client_id", "tous")
@@ -101,7 +112,9 @@ def dashboard():
     # Indicateurs clés calculés côté serveur
     total = len(donnees_filtrees)
     potables = sum(1 for d in donnees_filtrees if d.get("prediction_potability") == 1)
-    non_potables = sum(1 for d in donnees_filtrees if d.get("prediction_potability") == 0)
+    non_potables = sum(
+        1 for d in donnees_filtrees if d.get("prediction_potability") == 0
+    )
 
     return render_template(
         "analyste/dashboard.html",
@@ -111,7 +124,12 @@ def dashboard():
         non_potables=non_potables,
         clients_ids=clients_ids,
         provenances=provenances,
-        filtres={"client_id": f_client, "provenance": f_prov, "resultat": f_result,
-                 "date_debut": f_debut, "date_fin": f_fin},
+        filtres={
+            "client_id": f_client,
+            "provenance": f_prov,
+            "resultat": f_result,
+            "date_debut": f_debut,
+            "date_fin": f_fin,
+        },
         erreur=erreur,
     )

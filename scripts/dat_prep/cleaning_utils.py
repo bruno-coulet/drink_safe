@@ -9,11 +9,12 @@ Développé pour Python 3.10+ et Pandas.
 """
 
 from typing import Any, Dict, List, Tuple
+
 import numpy as np
 import pandas as pd
 
-
 # --- Exploration & Diagnostic ---
+
 
 def get_missing_summary(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -30,14 +31,18 @@ def get_missing_summary(df: pd.DataFrame) -> pd.DataFrame:
         Un DataFrame contenant les colonnes ['type', 'missing_count', 'fill_rate_%'],
         trié par nombre de valeurs manquantes décroissant.
     """
-    return pd.DataFrame({
-        'type': df.dtypes,
-        'missing_count': df.isna().sum(),
-        'fill_rate_%': (df.count() / len(df) * 100).round(2)
-    }).sort_values(by='missing_count', ascending=False)
+    return pd.DataFrame(
+        {
+            "type": df.dtypes,
+            "missing_count": df.isna().sum(),
+            "fill_rate_%": (df.count() / len(df) * 100).round(2),
+        }
+    ).sort_values(by="missing_count", ascending=False)
 
 
-def get_special_columns(df: pd.DataFrame, max_modalities: int = 20) -> Dict[str, List[str]]:
+def get_special_columns(
+    df: pd.DataFrame, max_modalities: int = 20
+) -> Dict[str, List[str]]:
     """
     Identifie et catégorise les colonnes du DataFrame selon leurs propriétés structurelles.
 
@@ -62,18 +67,25 @@ def get_special_columns(df: pd.DataFrame, max_modalities: int = 20) -> Dict[str,
         - "high_cardinality" : Colonnes textuelles dont le nombre de valeurs uniques dépasse `max_modalities`.
         - "boolean" : Colonnes assimilables à des booléens (valeurs incluses dans {True, False, 1, 0, NaN}).
     """
-    string_cols = df.select_dtypes(include=['object', 'string']).columns.tolist()
+    string_cols = df.select_dtypes(include=["object", "string"]).columns.tolist()
     return {
         "empty": df.columns[df.isna().all()].tolist(),
         "constant": df.columns[df.nunique(dropna=False) <= 1].tolist(),
-        "numeric": df.select_dtypes(include=['number']).columns.tolist(),
+        "numeric": df.select_dtypes(include=["number"]).columns.tolist(),
         "categorical": string_cols,
-        "high_cardinality": [c for c in string_cols if df[c].nunique(dropna=True) > max_modalities],
-        "boolean": [col for col in df.columns if set(df[col].dropna().unique()).issubset({True, False, 1, 0})]
+        "high_cardinality": [
+            c for c in string_cols if df[c].nunique(dropna=True) > max_modalities
+        ],
+        "boolean": [
+            col
+            for col in df.columns
+            if set(df[col].dropna().unique()).issubset({True, False, 1, 0})
+        ],
     }
 
 
 # --- Nettoyage Vectorisé (Performant) ---
+
 
 def normalize_text_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -94,17 +106,22 @@ def normalize_text_features(df: pd.DataFrame) -> pd.DataFrame:
         Une copie du DataFrame original avec les colonnes textuelles nettoyées.
     """
     df = df.copy()
-    string_cols = df.select_dtypes(include=['object', 'string']).columns
+    string_cols = df.select_dtypes(include=["object", "string"]).columns
     for col in string_cols:
         df[col] = df[col].astype(str).str.lower()
-        df[col] = df[col].str.normalize('NFD').str.replace(r'[\u0300-\u036f]', '', regex=True)
-        df[col] = df[col].replace({'nan': np.nan, 'none': np.nan})
+        df[col] = (
+            df[col].str.normalize("NFD").str.replace(r"[\u0300-\u036f]", "", regex=True)
+        )
+        df[col] = df[col].replace({"nan": np.nan, "none": np.nan})
     return df
 
 
 # --- Pipeline Anti-Leakage (Train / Test Split Compliant) ---
 
-def fit_transform_clean(X_train: pd.DataFrame, config: Dict[str, Any]) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+
+def fit_transform_clean(
+    X_train: pd.DataFrame, config: Dict[str, Any]
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Nettoie le jeu d'entraînement (Train Set) et calcule les statistiques associées pour imputation.
 
@@ -162,7 +179,9 @@ def fit_transform_clean(X_train: pd.DataFrame, config: Dict[str, Any]) -> Tuple[
     return X, stats
 
 
-def transform_clean(X_test: pd.DataFrame, stats: Dict[str, Any], config: Dict[str, Any]) -> pd.DataFrame:
+def transform_clean(
+    X_test: pd.DataFrame, stats: Dict[str, Any], config: Dict[str, Any]
+) -> pd.DataFrame:
     """
     Applique strictement les statistiques issues du Train Set sur le jeu de Test (ou d'Inférence).
 

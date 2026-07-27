@@ -9,7 +9,8 @@ Description : Initialise l'expérience globale sur le serveur de suivi MLflow
 
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
 import mlflow
 import mlflow.sklearn
 from dotenv import load_dotenv
@@ -47,10 +48,7 @@ def initialiser_environnement_mlflow(nom_experience: str) -> None:
     experience = mlflow.get_experiment_by_name(nom_experience)
 
     if experience is None:
-        mlflow.create_experiment(
-            name=nom_experience,
-            artifact_location=uri_artifacts
-        )
+        mlflow.create_experiment(name=nom_experience, artifact_location=uri_artifacts)
 
     mlflow.set_experiment(nom_experience)
 
@@ -70,7 +68,7 @@ def executer_run_validation() -> None:
         mlflow.sklearn.log_model(
             sk_model=modele,
             artifact_path="model",
-            registered_model_name="WaterPotabilityBaseline"
+            registered_model_name="WaterPotabilityBaseline",
         )
 
 

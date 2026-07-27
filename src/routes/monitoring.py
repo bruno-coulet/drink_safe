@@ -11,30 +11,25 @@ Endpoints :
 -------------------------------------------------------------------------------
 """
 
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
+from typing import Any
+
 import psycopg2
+from fastapi import APIRouter, Depends, HTTPException, Query
 from psycopg2.extras import RealDictCursor
-from typing import Dict, Any, List
 
 from src.config import settings
 from src.dependencies.auth import get_current_client
 
-
-
-
-
-
 router = APIRouter(prefix="/monitoring", tags=["Monitoring & Supervision"])
 
 
-@router.get("/logs", response_model=List[Dict[str, Any]])
+@router.get("/logs", response_model=list[dict[str, Any]])
 def lister_logs(
     limite: int = Query(default=100, ge=1, le=500),
-    status_code: Optional[int] = Query(default=None),
-    endpoint: Optional[str] = Query(default=None),
+    status_code: int | None = Query(default=None),
+    endpoint: str | None = Query(default=None),
     _: str = Depends(get_current_client),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Retourne les journaux d'accès filtrables pour la supervision d'exploitation.
 
     Args:
@@ -45,8 +40,8 @@ def lister_logs(
     Returns:
         Liste des entrées de journaux triées par date décroissante.
     """
-    conditions: List[str] = []
-    params: List[Any] = []
+    conditions: list[str] = []
+    params: list[Any] = []
 
     if status_code is not None:
         conditions.append("status_code = %s")
@@ -67,19 +62,18 @@ def lister_logs(
         LIMIT %s;
     """
 
-    with psycopg2.connect(settings.DATABASE_URL) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query, params)
-            colonnes = [desc[0] for desc in cursor.description]
-            lignes = cursor.fetchall()
+    with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+        cursor.execute(query, params)
+        colonnes = [desc[0] for desc in cursor.description]
+        lignes = cursor.fetchall()
 
     return [dict(zip(colonnes, ligne)) for ligne in lignes]
 
 
-@router.get("/metrics", response_model=Dict[str, Any])
+@router.get("/metrics", response_model=dict[str, Any])
 def metriques_agregees(
     _: str = Depends(get_current_client),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Retourne les métriques agrégées de l'infrastructure (dernières 24h).
 
     Returns:
@@ -106,15 +100,14 @@ def metriques_agregees(
         LIMIT 10;
     """
 
-    with psycopg2.connect(settings.DATABASE_URL) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query_global)
-            row = cursor.fetchone()
-            total, duree_moy, erreurs, clients = row if row else (0, 0, 0, 0)
+    with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+        cursor.execute(query_global)
+        row = cursor.fetchone()
+        total, duree_moy, erreurs, clients = row if row else (0, 0, 0, 0)
 
-            cursor.execute(query_par_endpoint)
-            cols = [d[0] for d in cursor.description]
-            top_endpoints = [dict(zip(cols, r)) for r in cursor.fetchall()]
+        cursor.execute(query_par_endpoint)
+        cols = [d[0] for d in cursor.description]
+        top_endpoints = [dict(zip(cols, r)) for r in cursor.fetchall()]
 
     taux_erreur = round((erreurs / total * 100), 1) if total else 0.0
 
@@ -129,10 +122,8 @@ def metriques_agregees(
     }
 
 
-
-
 @router.get("/stats")
-def get_monitoring_stats() -> Dict[str, Any]:
+def get_monitoring_stats() -> dict[str, Any]:
     """Retourne les indicateurs de santé (KPI) pour le Responsable d'Exploitation."""
     try:
         conn = psycopg2.connect(settings.DATABASE_URL)
@@ -151,19 +142,26 @@ def get_monitoring_stats() -> Dict[str, Any]:
         conn.close()
 
         total_req = stats["total_requests"]
-        error_rate = round((stats["total_errors"] / total_req * 100), 2) if total_req > 0 else 0.0
+        error_rate = (
+            round((stats["total_errors"] / total_req * 100), 2)
+            if total_req > 0
+            else 0.0
+        )
 
         return {
             "total_requests": total_req,
             "average_response_time_ms": stats["avg_time_ms"],
             "total_errors": stats["total_errors"],
-            "error_rate_percent": error_rate
+            "error_rate_percent": error_rate,
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur de lecture des statistiques: {e}")
+    except Exception as e: # noqa: BLE001
+        raise HTTPException(
+            status_code=500, detail=f"Erreur de lecture des statistiques: {e}"
+        )
+
 
 @router.get("/logs")
-def get_audit_logs(limit: int = 50) -> List[Dict[str, Any]]:
+def get_audit_logs(limit: int = 50) -> list[dict[str, Any]]:
     """Retourne les journaux d'accès pour l'Audit Trail."""
     try:
         conn = psycopg2.connect(settings.DATABASE_URL)
@@ -175,5 +173,5 @@ def get_audit_logs(limit: int = 50) -> List[Dict[str, Any]]:
         conn.close()
 
         return logs
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Erreur de lecture des logs: {e}")

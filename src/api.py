@@ -9,32 +9,34 @@ Description : Serveur FastAPI unifié orchestrant l'initialisation de PostgreSQL
 """
 
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List
-import mlflow
-import mlflow.sklearn
-from fastapi import FastAPI, Request, Response
-from mlflow.tracking import MlflowClient
-import psycopg2
+from typing import Any
 
-from src.config import settings, init_db
+import mlflow
+import mlflow.sklearn  # type: ignore
+import psycopg2
+import requests
+from fastapi import FastAPI, Request, Response
+from mlflow.tracking import MlflowClient  # type: ignore
+from prometheus_client import Counter, Histogram, make_asgi_app
+
+from src.config import init_db, settings
 from src.routes.clients import router as clients_router
 from src.routes.measurements import router as measurements_router
-from src.routes.predictions import router as predictions_router
-from src.routes.ocr import router as ocr_router
 from src.routes.monitoring import router as monitoring_router
-from prometheus_client import Counter, Histogram, make_asgi_app
-import time
+from src.routes.ocr import router as ocr_router
+from src.routes.predictions import router as predictions_router
 
-# --- PARADE CONTRE LE BLOCAGE 403 DNS REBINDING SUR L'API ---
-import requests
 _old_prepare_headers = requests.models.PreparedRequest.prepare_headers
+
 
 def patched_prepare_headers(self, headers):
     _old_prepare_headers(self, headers)
     # On écrase l'en-tête Host UNIQUEMENT si la cible est le conteneur MLflow
     if self.url and "mlflow" in self.url:
         self.headers["Host"] = "localhost:5000"
+
 
 requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 # -----------------------------------------------------------
@@ -43,10 +45,12 @@ requests.models.PreparedRequest.prepare_headers = patched_prepare_headers
 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
 
 # Registre en mémoire pour stocker les instances de modèles chargées
-ml_models: Dict[str, Any] = {}
+ml_models: dict[str, Any] = {}
 # Registre parallèle des versions chargées (algo_key -> numéro de version)
-ml_model_versions: Dict[str, str] = {}
+ml_model_versions: dict[str, str] = {}
 
+
+# Se déclenche à l'allumage du serveur global
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Gère le cycle de vie applicatif (Démarrage et Arrêt du serveur)."""
@@ -54,10 +58,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("[API Unique] Étape 1 : Initialisation des tables PostgreSQL...")
     try:
         init_db()
-    except Exception as e:
+    except Exception as e:# noqa: BLE001
         print(f"Alerte : Échec de l'initialisation de la BDD au démarrage : {e}")
 
-    print("[API Unique] Étape 2 : Scan et chargement des modèles depuis MLflow Model Registry...")
+    print(
+        "[API Unique] Étape 2 : Scan et chargement des modèles depuis MLflow Model Registry..."
+    )
     try:
         client = MlflowClient()
         registered_models = client.search_registered_models()
@@ -81,14 +87,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 loaded = False
 
                 # Tentative A : Via l'URI du Registre sur la DERNIÈRE version
+                # va lire le fichier binaire .pkl à l'intérieur du volume partagé mlruns_artifacts
                 try:
                     model_uri = f"models:/{model_name}/{version}"
+                    # stocke ce binaire dans un dictionnaire global en mémoire vive pour que l'API soit ultra-rapide par la suite
                     ml_models[algo_key] = mlflow.sklearn.load_model(model_uri)
                     ml_model_versions[algo_key] = str(version)
-                    print(f"✓ {model_name} (v{version}) chargé avec succès via l'URI du Registre.")
+                    print(
+                        f"✓ {model_name} (v{version}) chargé avec succès via l'URI du Registre."
+                    )
                     loaded = True
-                except Exception:
-                    pass
+                except Exception as e_tentative_a:  # noqa: BLE001
+                    print(f"Info : {model_name} introuvable via l'URI du Registre. Raison : {e_tentative_a} - Passage au Fallback...")
+
 
                 # Tentative B (Fallback Industriel) : Si le dossier de version est introuvable,
                 # on bascule sur l'URI directe du Run ID (qui pointe sur les dossiers m-XXXX)
@@ -97,13 +108,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                         fallback_uri = f"runs:/{run_id}/model"
                         ml_models[algo_key] = mlflow.sklearn.load_model(fallback_uri)
                         ml_model_versions[algo_key] = str(version)
-                        print(f"✓ {model_name} (v{version}) chargé avec succès via Fallback (Run ID: {run_id}).")
+                        print(
+                            f"✓ {model_name} (v{version}) chargé avec succès via Fallback (Run ID: {run_id})."
+                        )
                         loaded = True
-                    except Exception as e_fallback:
-                        print(f"⚠️ Impossible de charger le modèle {model_name} : {e_fallback}")
+                    except Exception as e_fallback:  # noqa: BLE001
+                        print(
+                            f"Impossible de charger le modèle {model_name} : {e_fallback}"
+                        )
 
-    except Exception as e:
-        print(f"⚠️ Mode dégradé enclenché : Échec de connexion à MLflow UI : {e}")
+    except Exception as e: # noqa: BLE001
+        print(f"Mode dégradé enclenché : Échec de connexion à MLflow UI : {e}")
 
     yield
 
@@ -113,13 +128,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ml_model_versions.clear()
 
 
-
 # Instanciation de l'API Unique (Data + Model + OCR)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Service unifié Drink safe : Gestion des prélèvements, Ingestion OCR et Inférence.",
     version=settings.VERSION,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -149,20 +163,24 @@ async def journaliser_requete_et_temps(request: Request, call_next: Any) -> Resp
     ) VALUES (%s, %s, %s, %s, %s, %s);
     """
     try:
-        with psycopg2.connect(settings.DATABASE_URL) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(query_log, (
+        with psycopg2.connect(settings.DATABASE_URL) as conn, conn.cursor() as cursor:
+            cursor.execute(
+                query_log,
+                (
                     client_id_tracé,
-                    api_key_utilisee if api_key_utilisee == "Pas de clé transmise" else "wf_live_********",
+                    api_key_utilisee
+                    if api_key_utilisee == "Pas de clé transmise"
+                    else "wf_live_********",
                     request.url.path,
                     request.method,
                     response.status_code,
-                    duration_ms
-                ))
-                conn.commit()
-    except Exception as e:
+                    duration_ms,
+                ),
+            )
+            conn.commit()
+    except Exception as e:  # noqa: BLE001 
         # Un échec de log ne doit jamais bloquer la réponse HTTP du client en production
-        print(f"⚠️ Erreur MLOps lors de l'enregistrement du log de monitoring : {e}")
+        print(f"Erreur MLOps lors de l'enregistrement du log de monitoring : {e}")
 
     return response
 
@@ -176,20 +194,24 @@ app.include_router(monitoring_router, prefix="/api")
 
 
 @app.get("/health", tags=["Utility"])
-def health_check() -> Dict[str, Any]:
+def health_check() -> dict[str, Any]:
     """Vérifie l'état de santé de l'API et liste les modèles d'IA actifs en mémoire."""
-    active_models: List[str] = [k for k, v in ml_models.items() if v is not None]
+    active_models: list[str] = [k for k, v in ml_models.items() if v is not None]
     return {
         "status": "green" if active_models else "amber",
         "project": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "active_models": active_models
+        "active_models": active_models,
     }
+
 
 # --- MONITORING ---------
 # 1. Définition des métriques RED (Rate, Errors, Duration)
-REQUESTS = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
+REQUESTS = Counter(
+    "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
+)
 LATENCY = Histogram("http_request_duration_seconds", "Request duration", ["endpoint"])
+
 
 # 2. Le middleware qui intercepte chaque appel API
 @app.middleware("http")
@@ -199,9 +221,12 @@ async def metrics_middleware(request, call_next):
 
     # On enregistre la durée et le statut
     LATENCY.labels(endpoint=request.url.path).observe(time.time() - t0)
-    REQUESTS.labels(method=request.method, endpoint=request.url.path, status=response.status_code).inc()
+    REQUESTS.labels(
+        method=request.method, endpoint=request.url.path, status=response.status_code
+    ).inc()
 
     return response
+
 
 # 3. Monte la route /metrics accessible pour Prometheus
 app.mount("/metrics", make_asgi_app())

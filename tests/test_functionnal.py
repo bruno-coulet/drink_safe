@@ -7,20 +7,23 @@ Description : Validation du scénario complet de bout en bout : connexion BDD,
 """
 
 import os
-import unittest.mock as mock
 import uuid
-import pytest
+from unittest import mock
+
 import psycopg2
+import pytest
 from fastapi.testclient import TestClient
-from src.config import settings
+
 from src.api import app
 
 # Initialisation de la base de données pour les tests
-from src.config import init_db
+from src.config import init_db, settings
+
 init_db()
 
 # Instanciation du client de test FastAPI
 client = TestClient(app)
+
 
 def get_adapted_database_url() -> str:
     """
@@ -35,14 +38,16 @@ def get_adapted_database_url() -> str:
         db_url = db_url.replace("@postgres:", "@127.0.0.1:")
     return db_url
 
+
 def test_verif_connexion_bdd() -> None:
     """Vérifie que la BDD est joignable avant de lancer les tests fonctionnels."""
     db_url = get_adapted_database_url()
     try:
         conn = psycopg2.connect(db_url)
         conn.close()
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         pytest.fail(f"La base de données n'est pas joignable pour les tests : {e}")
+
 
 @mock.patch("requests.post")
 def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
@@ -61,7 +66,7 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     payload_client = {
         "client_id": client_id,
         "denomination": "Laboratoire Provence Test",
-        "adresse": "45 Avenue de la République, 13002 Marseille"
+        "adresse": "45 Avenue de la République, 13002 Marseille",
     }
 
     # Appel de l'endpoint réservé à l'admin
@@ -90,10 +95,14 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     mock_post_ocr.return_value = mock_response
 
     # Téléversement simulé d'un fichier PDF
-    file_payload = {"file": ("report.pdf", b"contenu_binaire_factice", "application/pdf")}
+    file_payload = {
+        "file": ("report.pdf", b"contenu_binaire_factice", "application/pdf")
+    }
     headers = {"X-API-Key": api_key}
 
-    response_ocr = client.post("/api/ocr/lab-report", files=file_payload, headers=headers)
+    response_ocr = client.post(
+        "/api/ocr/lab-report", files=file_payload, headers=headers
+    )
     assert response_ocr.status_code in [200, 201]
 
     ocr_data = response_ocr.json()
@@ -115,7 +124,10 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     cursor = conn.cursor()
 
     # On vérifie que la ligne a été correctement persistée
-    cursor.execute("SELECT id, client_id, provenance, ph FROM prelevements WHERE id = %s", (prelevement_id,))
+    cursor.execute(
+        "SELECT id, client_id, provenance, ph FROM prelevements WHERE id = %s",
+        (prelevement_id,),
+    )
     row = cursor.fetchone()
     assert row is not None
     assert row[1] == client_id
@@ -127,47 +139,8 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     # ==========================================
     # ÉTAPE 4 : Inférence par consensus des 4 modèles
     # ==========================================
-
-    # # On simule le module mlflow injecté dans votre route de prédiction
-    # with mock.patch("src.routes.predictions.mlflow") as mock_mlflow:
-
-    #     # 1. On crée un faux modèle IA qui prédit toujours "1" (Potable)
-    #     faux_modele = mock.MagicMock()
-    #     faux_modele.predict.return_value = [2]
-
-    #     # 2. On indique à MLflow de renvoyer ce faux modèle, peu importe l'algorithme demandé
-    #     mock_mlflow.sklearn.load_model.return_value = faux_modele
-    #     mock_mlflow.xgboost.load_model.return_value = faux_modele
-    #     mock_mlflow.pyfunc.load_model.return_value = faux_modele
-
-    #     # 3. On sollicite la prédiction par consensus sur l'API
-    #     response_predict = client.post(f"/api/predict/from-prelevement/{prelevement_id}", headers=headers)
-
-    #     # DEBUG (optionnel)
-    #     print("DÉTAIL PREDICT :", response_predict.text)
-
-    #     # 4. Assertions de réussite
-    #     assert response_predict.status_code in [200, 201]
-
-
-    #     predict_data = response_predict.json()
-    #     # On vérifie la clé réelle renvoyée par l'API
-    #     # assert "prediction_potability" in predict_data
-    #     # assert predict_data["prediction_potability"] == 1
-    #     # Vérifie la clé réelle du consensus renvoyée par l'API : "prediction_consensus" au lieu de "prediction_potability"
-    #     assert "prediction_consensus" in predict_data
-    #     assert predict_data["prediction_consensus"] == 1
-
-    #     # 2. On vérifie que les 4 modèles ont bien été appelés dans les détails
-    #     assert "details" in predict_data
-    #     assert len(predict_data["details"]) == 4
-
-
-
-
     # Simule la fonction interne pour couper tout lien avec MLflow
     with mock.patch("src.routes.predictions._charger_modele") as mock_charger_modele:
-
         # 1. On crée un faux modèle IA qui prédit "1" (Potable)
         faux_modele = mock.MagicMock()
         faux_modele.predict.return_value = [1]
@@ -176,7 +149,9 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
         mock_charger_modele.return_value = (faux_modele, "v_mock")
 
         # 3. On sollicite la prédiction sur l'API
-        response_predict = client.post(f"/api/predict/from-prelevement/{prelevement_id}", headers=headers)
+        response_predict = client.post(
+            f"/api/predict/from-prelevement/{prelevement_id}", headers=headers
+        )
 
         # 4. Assertions
         assert response_predict.status_code in [200, 201]
@@ -186,16 +161,6 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
         assert predict_data["prediction_consensus"] == 1
         assert "details" in predict_data
         assert len(predict_data["details"]) == 4
-
-
-
-
-
-
-
-
-
-
 
     # ==========================================
     # ÉTAPE 5 : Traçabilité RGPD & Logs d'accès
@@ -208,7 +173,7 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     # Note : Le champ de date s'appelle 'cree_le' dans notre base standardisée
     cursor.execute(
         "SELECT client_id, endpoint, status_code FROM action_logs WHERE client_id = %s ORDER BY id DESC LIMIT 1",
-        (client_id,)
+        (client_id,),
     )
     log_row = cursor.fetchone()
     assert log_row is not None
@@ -217,6 +182,7 @@ def test_scenario_complet_bout_en_bout(mock_post_ocr) -> None:
     assert log_row[0] != "ANONYMOUS"
 
     conn.close()
+
 
 def test_isolation_multi_tenant_rgpd() -> None:
     """
@@ -227,20 +193,50 @@ def test_isolation_multi_tenant_rgpd() -> None:
     headers_admin = {"X-API-Key": "test_admin_key"}
 
     c1_id = f"tenant_1_{uuid.uuid4().hex[:4]}"
-    client.post("/api/clients", json={"client_id": c1_id, "denomination": "Structure 1", "adresse": "Ad 1"}, headers=headers_admin)
+    r1 = client.post(
+        "/api/clients",
+        json={"client_id": c1_id, "denomination": "Structure 1", "adresse": "Ad 1"},
+        headers=headers_admin,
+    )
+    # Récupère la clé API du Client 1 pour pouvoir faire des requêtes en son nom
+    key_client_1 = r1.json()["api_key"]
 
     c2_id = f"tenant_2_{uuid.uuid4().hex[:4]}"
-    r2 = client.post("/api/clients", json={"client_id": c2_id, "denomination": "Structure 2", "adresse": "Ad 2"}, headers=headers_admin)
+    r2 = client.post(
+        "/api/clients",
+        json={"client_id": c2_id, "denomination": "Structure 2", "adresse": "Ad 2"},
+        headers=headers_admin,
+    )
     key_client_2 = r2.json()["api_key"]
 
     # 2. Client 1 dépose un prélèvement
     payload_mesures = {
-        "ph": 7.1, "Hardness": 180.0, "Solids": 12000.0, "Chloramines": 3.0,
-        "Sulfate": 280.0, "Conductivity": 390.0, "Organic_carbon": 11.0,
-        "Trihalomethanes": 40.0, "Turbidity": 2.1, "observations": "Mesures Client 1"
+        "ph": 7.1,
+        "Hardness": 180.0,
+        "Solids": 12000.0,
+        "Chloramines": 3.0,
+        "Sulfate": 280.0,
+        "Conductivity": 390.0,
+        "Organic_carbon": 11.0,
+        "Trihalomethanes": 40.0,
+        "Turbidity": 2.1,
+        "observations": "Mesures Client 1",
     }
-    # On force l'insertion pour Client 1 directement ou via l'API si on a sa clé.
-    # Pour le test, on va simuler l'interrogation par le Client 2.
+    
+    # Simule le Client 1 qui dépose ses mesures.
+    headers_c1 = {"X-API-Key": key_client_1}
+
+    # mocke le lazy loading pour empêcher l'API de chercher le vrai MLflow dans GitHub Actions
+    with mock.patch("src.routes.predictions._charger_modele") as mock_charger_modele:
+        faux_modele = mock.MagicMock()
+        faux_modele.predict.return_value = [3]
+        mock_charger_modele.return_value = (faux_modele, "v_mock")
+
+        response_c1 = client.post("/api/predict/all", json=payload_mesures, headers=headers_c1)
+
+    assert response_c1.status_code in (200, 201)
+
+    # 3. Pour le test, simule l'interrogation par le Client 2.
     # Client 2 appelle GET /api/measurements : son historique doit être totalement vide !
     headers_c2 = {"X-API-Key": key_client_2}
     response_c2 = client.get("/api/measurements", headers=headers_c2)
@@ -248,5 +244,9 @@ def test_isolation_multi_tenant_rgpd() -> None:
     measurements_c2 = response_c2.json()
 
     # Client 2 ne doit pas voir le prélèvement du Client 1
+    # valide d'abord que la liste est vide (vraie garantie RGPD)
+    assert len(measurements_c2) == 0, "Faille de sécurité : Le client 2 voit des prélèvements qui ne lui appartiennent pas !"
+    
+    # Et par précaution supplémentaire (votre code)
     for m in measurements_c2:
         assert m["client_id"] != c1_id
