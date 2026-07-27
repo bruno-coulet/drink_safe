@@ -7,14 +7,15 @@ Description : Validation du scénario complet de bout en bout : connexion BDD,
 """
 
 import os
-from unittest import mock
 import uuid
+from unittest import mock
 
 import psycopg2
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api import app
+
 # Initialisation de la base de données pour les tests
 from src.config import init_db, settings
 

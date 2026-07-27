@@ -11,8 +11,8 @@ Développé pour Python 3.10+ et Scikit-Learn.
 """
 
 import math
-from typing import Any
 from collections.abc import Iterable
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np

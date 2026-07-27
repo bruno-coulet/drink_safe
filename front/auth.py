@@ -25,20 +25,6 @@ ADMIN_EXPLOITATION_HASH: str = os.getenv("ADMIN_EXPLOITATION_PASSWORD_HASH", "")
 ADMIN_ANALYSTE_API_KEY: str = os.getenv("ADMIN_ANALYSTE_API_KEY", "")
 ADMIN_EXPLOITATION_API_KEY: str = os.getenv("ADMIN_EXPLOITATION_API_KEY", "")
 
-
-# def _valider_cle_client(api_key: str) -> bool:
-#     """Vérifie qu'une clé API client est valide en interrogeant FastAPI."""
-#     try:
-#         resp = requests.get(
-#             f"{API_BASE_URL}/measurements",
-#             headers={"X-API-Key": api_key},
-#             timeout=5,
-#         )
-#         return resp.status_code == 200
-#     except requests.RequestException:
-#         return False
-
-
 def _valider_cle_client(api_key: str) -> dict | None:
     """Vérifie qu'une clé API client est valide et récupère ses données (RGPD)."""
     try:

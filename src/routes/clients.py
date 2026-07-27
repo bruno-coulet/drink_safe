@@ -227,7 +227,7 @@ def regenerer_cle_api(
 
 
 @router.get("/me")
-def get_mon_profil(api_key: str = Security(api_key_header)) -> Dict[str, Any]:
+def get_mon_profil(api_key: str = Security(api_key_header)) -> dict[str, Any]:
     """Retourne les informations de profil du client authentifié (RGPD — User Story #5).
 
     Args:

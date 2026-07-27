@@ -10,9 +10,10 @@ Description : Interface du client final — soumettre un prélèvement par
 
 import csv
 import os
+from abc import Callable
 from functools import wraps
 from io import StringIO
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import requests
 from flask import (
@@ -71,7 +72,7 @@ def dashboard():
 @role_requis("client")
 def predict():
     """Soumet un prélèvement manuel aux 4 modèles et affiche le consensus."""
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "ph": float(request.form.get("ph", 7.0)),
         "Hardness": float(request.form.get("hardness", 200.0)),
         "Solids": float(request.form.get("solids", 20000.0)),
@@ -84,8 +85,8 @@ def predict():
         "observations": "Soumission manuelle depuis le portail Flask",
     }
     headers = {"X-API-Key": session["api_key"]}
-    resultat: Optional[Dict] = None
-    erreur: Optional[str] = None
+    resultat: dict | None = None
+    erreur: str | None = None
 
     try:
         resp = requests.post(
@@ -116,9 +117,9 @@ def ocr():
         return redirect(url_for("client.dashboard"))
 
     headers = {"X-API-Key": session["api_key"]}
-    resultat_ocr: Optional[Dict] = None
-    resultat_pred: Optional[Dict] = None
-    erreur: Optional[str] = None
+    resultat_ocr: dict | None = None
+    resultat_pred: dict | None = None
+    erreur: str | None = None
 
     try:
         resp_ocr = requests.post(

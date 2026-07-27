@@ -10,8 +10,9 @@ Description : Interface de supervision métier — consultation globale des
 """
 
 import os
+from abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import requests
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -38,13 +39,13 @@ def role_requis(role: str) -> Callable:
 
 
 def _filtrer(
-    donnees: List[Dict],
+    donnees: list[dict],
     client_id: str,
     provenance: str,
     resultat: str,
     date_debut: str,
     date_fin: str,
-) -> List[Dict]:
+) -> list[dict]:
     """Applique les filtres multicritères sur la liste des prélèvements."""
     filtrees = donnees
 
@@ -77,8 +78,8 @@ def _filtrer(
 def dashboard():
     """Charge tous les prélèvements et applique les filtres de la requête."""
     headers = {"X-API-Key": session["api_key"]}
-    donnees: List[Dict] = []
-    erreur: Optional[str] = None
+    donnees: list[dict] = []
+    erreur: str | None = None
 
     try:
         resp = requests.get(
