@@ -153,14 +153,14 @@ def _inferer(model: Any, payload: WaterSample) -> tuple[int, float | None]:
     return potability_result, score_potabilite
 
 
-def _comparer_modeles(payload: WaterSample) -> dict[str, any]:
+def _comparer_modeles(payload: WaterSample) -> dict[str, Any]:
     """Applique le garde-fou OMS puis les 4 modèles, sans rien persister.
 
     La persistance est laissée à l'appelant (INSERT pour une saisie directe,
     UPDATE pour l'enrichissement d'un prélèvement existant).
 
     Returns:
-        dict[str, any]: consensus, comptage des votes, détail par modèle et la
+        dict[str, Any]: consensus, comptage des votes, détail par modèle et la
         chaîne `model_ver` à stocker en base.
     """
     raison_rejet = _garde_fou_oms(payload)
@@ -212,7 +212,7 @@ def _comparer_modeles(payload: WaterSample) -> dict[str, any]:
 @router.post("/", status_code=status.HTTP_200_OK)
 def executer_prediction(
     payload: PredictionRequest, client_id: str = Depends(get_current_client)
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """Arbitre la potabilité d'un échantillon via garde-fou OMS puis un modèle choisi.
 
     Args:
@@ -220,7 +220,7 @@ def executer_prediction(
         client_id (str): Identifiant du client authentifié par clé API (RGPD).
 
     Returns:
-        dict[str, any]: Prédiction (0/1), score, modèle et version utilisés.
+        dict[str, Any]: Prédiction (0/1), score, modèle et version utilisés.
     """
     raison_rejet = _garde_fou_oms(payload)
     if raison_rejet:
@@ -262,7 +262,7 @@ def executer_prediction(
 @router.post("/all", status_code=status.HTTP_200_OK)
 def executer_prediction_multi(
     payload: WaterSample, client_id: str = Depends(get_current_client)
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """Compare les 4 modèles sur un échantillon saisi et persiste un consensus (nouvelle ligne).
 
     Args:
@@ -270,7 +270,7 @@ def executer_prediction_multi(
         client_id (str): Identifiant du client authentifié par clé API (RGPD).
 
     Returns:
-        dict[str, any]: Consensus, comptage des votes et détail par modèle.
+        dict[str, Any]: Consensus, comptage des votes et détail par modèle.
     """
     try:
         resultat = _comparer_modeles(payload)
@@ -279,7 +279,7 @@ def executer_prediction_multi(
     except Exception as e:  # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur lors du calcul comparatif : {str(e)}",
+            detail=f"Erreur lors du calcul comparatif : {e}",
         )
 
     _sauvegarder_prelevement_en_bdd(
@@ -291,7 +291,7 @@ def executer_prediction_multi(
 @router.post("/from-prelevement/{prelevement_id}", status_code=status.HTTP_200_OK)
 def executer_prediction_from_prelevement(
     prelevement_id: int, client_id: str = Depends(get_current_client)
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """Enrichit un prélèvement existant (ex. issu de l'OCR) avec la prédiction des 4 modèles.
 
     Charge les mesures du prélèvement appartenant au client, applique le garde-fou OMS
@@ -302,7 +302,7 @@ def executer_prediction_from_prelevement(
         client_id (str): Identifiant du client authentifié par clé API (RGPD).
 
     Returns:
-        dict[str, any]: Consensus, détail par modèle et identifiant du prélèvement.
+        dict[str, Any]: Consensus, détail par modèle et identifiant du prélèvement.
 
     Raises:
         HTTPException: 404 si le prélèvement n'existe pas ou n'appartient pas au client.
